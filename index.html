@@ -4,17 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scanner EAN/QR Code</title>
-    <!-- Usando a mesma biblioteca do seu código -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --danger: #dc3545;
+            --success: #28a745;
+            --warning: #f59e0b;
+            --secondary: #6c757d;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --border: #dee2e6;
         }
         
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
@@ -26,22 +33,23 @@
             max-width: 800px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             overflow: hidden;
             flex: 1;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 20px;
             text-align: center;
         }
         
         .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 22px;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
         
         .header p {
@@ -50,9 +58,8 @@
         }
         
         .scanner-container {
-            padding: 15px;
+            padding: 20px;
             text-align: center;
-            flex: 1;
         }
         
         #reader {
@@ -60,7 +67,7 @@
             height: 300px;
             background: #000;
             margin: 0 auto 15px;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             position: relative;
             display: none;
@@ -74,242 +81,264 @@
             width: 80%;
             height: 150px;
             border: 3px solid #00ff00;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 0 0 1000px rgba(0,0,0,0.7);
             pointer-events: none;
             z-index: 10;
         }
         
-        .scanner-frame::before {
-            content: '';
+        .scanner-line {
             position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 3px;
-            background: #00ff00;
-            animation: scanLine 2s linear infinite;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            animation: scanLine 2s ease-in-out infinite;
         }
         
         @keyframes scanLine {
-            0% { top: -10px; }
-            50% { top: calc(100% + 10px); }
-            51% { top: -10px; }
-            100% { top: -10px; }
+            0%, 100% { top: 0; opacity: 1; }
+            50% { top: 100%; opacity: 0.5; }
         }
         
         .controls {
-            margin: 15px 0;
+            margin: 20px 0;
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 50px;
+            padding: 12px 24px;
+            border-radius: 25px;
             font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-            display: flex;
+            transition: all 0.3s;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            min-width: 120px;
+            min-width: 140px;
+            line-height: 1;
         }
         
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
         }
         
         .btn-secondary {
-            background: #6c757d;
+            background: var(--secondary);
         }
         
         .btn-danger {
-            background: #dc3545;
+            background: var(--danger);
         }
         
         .btn-success {
-            background: #28a745;
+            background: var(--success);
         }
         
-        /* Modal de Confirmação */
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        .status {
+            padding: 12px;
+            margin: 16px 0;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-color: #bfdbfe;
+        }
+        
         .modal {
-            display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
+            background: rgba(0,0,0,0.85);
+            display: none;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(5px);
+            z-index: 1000;
+            padding: 20px;
+            backdrop-filter: blur(4px);
         }
         
         .modal-content {
             background: white;
             padding: 25px;
-            border-radius: 15px;
+            border-radius: 12px;
             max-width: 400px;
-            width: 90%;
+            width: 100%;
             text-align: center;
-            animation: modalSlideIn 0.3s ease-out;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: modalIn 0.3s ease-out;
         }
         
-        @keyframes modalSlideIn {
-            from {
-                transform: translateY(-50px) scale(0.9);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         
         .modal h2 {
-            color: #667eea;
-            margin-bottom: 15px;
+            color: var(--primary);
+            margin-bottom: 16px;
             font-size: 20px;
+            font-weight: 600;
         }
         
-        .ean-display {
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            margin: 15px 0;
+        .scanned-code {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 16px 0;
             padding: 12px;
-            background: #f8f9fa;
+            background: var(--light);
             border-radius: 8px;
             word-break: break-all;
             font-family: monospace;
-            border: 2px dashed #667eea;
+            border: 2px solid var(--border);
         }
         
         .input-group {
-            margin: 15px 0;
+            margin: 20px 0;
             text-align: left;
         }
         
         .input-group label {
             display: block;
             margin-bottom: 8px;
-            color: #555;
+            color: var(--dark);
             font-weight: 500;
+            font-size: 14px;
         }
         
         .input-group input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
+            padding: 14px;
+            border: 2px solid var(--border);
             border-radius: 8px;
-            font-size: 18px;
-            transition: border-color 0.3s;
+            font-size: 16px;
             text-align: center;
+            transition: border-color 0.3s;
         }
         
         .input-group input:focus {
-            border-color: #667eea;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .modal-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 24px;
         }
         
         .modal-buttons button {
             flex: 1;
-            padding: 12px;
         }
         
-        /* Histórico */
         .history {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            max-height: 200px;
-            overflow-y: auto;
-            background: #f8f9fa;
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            background: var(--light);
         }
         
         .history h3 {
-            margin-bottom: 10px;
-            color: #333;
+            margin-bottom: 16px;
+            color: var(--dark);
             font-size: 16px;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
         }
         
+        .history-list {
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        
         .history-item {
-            padding: 8px 12px;
+            padding: 10px 12px;
             background: white;
-            margin-bottom: 6px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            font-size: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+            font-size: 13px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .history-item span {
-            font-weight: bold;
-            color: #667eea;
+        .history-code {
+            font-family: monospace;
+            font-weight: 500;
+            color: var(--primary);
         }
         
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 8px;
-            display: none;
-            font-size: 14px;
+        .history-quantity {
+            color: var(--success);
+            font-weight: 600;
         }
         
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
-        }
-        
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-            display: block;
+        .history-time {
+            color: var(--secondary);
+            font-size: 11px;
         }
         
         .loading {
             display: none;
             text-align: center;
-            margin: 15px 0;
+            margin: 16px 0;
         }
         
-        .loading::after {
-            content: '';
+        .spinner {
             display: inline-block;
-            width: 25px;
-            height: 25px;
-            border: 3px solid #ddd;
-            border-top: 3px solid #667eea;
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -321,10 +350,10 @@
         
         .camera-info {
             background: #e9ecef;
-            padding: 8px 12px;
+            padding: 10px 16px;
             border-radius: 8px;
-            margin: 10px 0;
-            font-size: 12px;
+            margin: 16px 0;
+            font-size: 13px;
             color: #495057;
             display: none;
             align-items: center;
@@ -332,123 +361,73 @@
             gap: 8px;
         }
         
-        .camera-info span {
-            font-weight: bold;
-            color: #667eea;
-        }
-        
-        /* Responsividade para mobile */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .header {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            #reader {
-                height: 250px;
-            }
-            
-            .scanner-frame {
-                height: 120px;
-            }
-            
-            .btn {
-                padding: 10px 15px;
-                font-size: 13px;
-                min-width: 110px;
-            }
-            
-            .modal-content {
-                padding: 20px;
-            }
-            
-            .ean-display {
-                font-size: 18px;
-                padding: 10px;
-            }
-            
-            .history {
-                max-height: 150px;
-            }
+            body { padding: 10px; }
+            .header { padding: 16px; }
+            .scanner-container { padding: 16px; }
+            #reader { height: 250px; }
+            .btn { min-width: 120px; padding: 10px 20px; }
+            .modal-content { padding: 20px; }
+            .modal-buttons { flex-direction: column; }
         }
         
         @media (max-width: 480px) {
-            #reader {
-                height: 200px;
-            }
-            
-            .scanner-frame {
-                height: 100px;
-            }
-            
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .btn {
-                width: 100%;
-                max-width: 250px;
-            }
-            
-            .modal-buttons {
-                flex-direction: column;
-            }
+            #reader { height: 200px; }
+            .scanner-frame { height: 120px; }
+            .controls { flex-direction: column; align-items: center; }
+            .btn { width: 100%; max-width: 280px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 Scanner de EAN/QR Code</h1>
-            <p>Use a câmera traseira para escanear códigos</p>
+            <h1>📱 Scanner EAN/QR Code</h1>
+            <p>Escaneie códigos de barras e envie para o Google Sheets</p>
         </div>
         
         <div class="scanner-container">
             <div id="reader">
-                <div class="scanner-frame"></div>
+                <div class="scanner-frame">
+                    <div class="scanner-line"></div>
+                </div>
             </div>
             
             <div class="camera-info" id="cameraInfo">
-                📸 Usando câmera traseira | 🔍 Auto-foco ativo
+                📸 Câmera traseira | 🔍 Auto-foco ativo
             </div>
             
             <div class="controls">
                 <button id="startBtn" class="btn">▶ Iniciar Scanner</button>
                 <button id="stopBtn" class="btn btn-secondary" disabled>⏹ Parar</button>
-                <button id="switchCamera" class="btn">🔄 Trocar Câmera</button>
+                <button id="switchCameraBtn" class="btn">🔄 Trocar Câmera</button>
             </div>
             
-            <div class="status" id="statusMessage"></div>
+            <div class="status" id="statusMessage">✅ Pronto para iniciar</div>
             
-            <div class="loading" id="loading">Enviando dados...</div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 8px; font-size: 14px; color: var(--secondary);">Enviando dados...</p>
+            </div>
         </div>
         
         <div class="history">
             <h3>📋 Histórico Recente</h3>
-            <div id="historyList">
-                <!-- Histórico será carregado aqui -->
+            <div class="history-list" id="historyList">
+                <!-- Histórico será inserido aqui -->
             </div>
         </div>
     </div>
     
-    <!-- Modal de Confirmação -->
     <div class="modal" id="confirmModal">
         <div class="modal-content">
-            <h2>Confirme os Dados</h2>
+            <h2>Confirmação de Leitura</h2>
             <p>Código escaneado:</p>
-            <div class="ean-display" id="scannedCode">1234567890123</div>
+            <div class="scanned-code" id="scannedCode"></div>
             
             <div class="input-group">
                 <label for="quantity">Quantidade:</label>
-                <input type="number" id="quantity" min="1" value="1" placeholder="Digite a quantidade" autofocus>
+                <input type="number" id="quantity" min="1" value="1" autofocus>
             </div>
             
             <div class="modal-buttons">
@@ -457,527 +436,385 @@
             </div>
         </div>
     </div>
-    
+
     <script>
-        // ========== CONFIGURAÇÕES ==========
+        // Configurações
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxykTkoKMU7MI8bGuBpuTQOogW9F4sGUCKnSzhrRV3M8KD1eg8RhPUjd9ThiAcMpVerxw/exec';
-        const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
         
-        // ========== VARIÁVEIS GLOBAIS ==========
-        let html5QrCode = null;
-        let currentCameraId = null;
-        let isScanning = false;
-        let lastScanned = '';
-        let lastScanTime = 0;
-        let cameras = [];
-        let currentCameraIndex = 0;
+        // Estado da aplicação
+        const state = {
+            scanner: null,
+            cameraId: null,
+            isScanning: false,
+            lastScanned: '',
+            cameras: [],
+            currentCameraIndex: 0
+        };
         
-        // ========== ELEMENTOS DOM ==========
-        const readerElement = document.getElementById('reader');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const switchCameraBtn = document.getElementById('switchCamera');
-        const confirmModal = document.getElementById('confirmModal');
-        const scannedCodeElement = document.getElementById('scannedCode');
-        const quantityInput = document.getElementById('quantity');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const saveBtn = document.getElementById('saveBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const loading = document.getElementById('loading');
-        const historyList = document.getElementById('historyList');
-        const cameraInfo = document.getElementById('cameraInfo');
+        // Elementos DOM
+        const elements = {
+            reader: document.getElementById('reader'),
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            switchCameraBtn: document.getElementById('switchCameraBtn'),
+            confirmModal: document.getElementById('confirmModal'),
+            scannedCode: document.getElementById('scannedCode'),
+            quantity: document.getElementById('quantity'),
+            cancelBtn: document.getElementById('cancelBtn'),
+            saveBtn: document.getElementById('saveBtn'),
+            status: document.getElementById('statusMessage'),
+            loading: document.getElementById('loading'),
+            historyList: document.getElementById('historyList'),
+            cameraInfo: document.getElementById('cameraInfo')
+        };
         
-        // ========== FUNÇÕES DO SCANNER (DA SUA LÓGICA) ==========
-        async function initScanner() {
-            if (isScanning) return;
+        // Configuração do scanner
+        const scannerConfig = {
+            fps: 30,
+            qrbox: { width: 280, height: 160 },
+            aspectRatio: 4/3,
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ]
+        };
+        
+        // Inicialização
+        function init() {
+            setupEventListeners();
+            checkCameraPermission();
+        }
+        
+        function setupEventListeners() {
+            elements.startBtn.addEventListener('click', startScanner);
+            elements.stopBtn.addEventListener('click', stopScanner);
+            elements.switchCameraBtn.addEventListener('click', switchCamera);
+            elements.cancelBtn.addEventListener('click', cancelSave);
+            elements.saveBtn.addEventListener('click', saveToSheets);
+            elements.quantity.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') elements.saveBtn.click();
+            });
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && elements.confirmModal.style.display === 'flex') {
+                    cancelSave();
+                }
+            });
+        }
+        
+        // Verificação de permissão de câmera
+        async function checkCameraPermission() {
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true });
+                updateStatus('✅ Câmera autorizada', 'success');
+            } catch {
+                updateStatus('⚠️ Permissão de câmera necessária', 'error');
+            }
+        }
+        
+        // Funções do Scanner
+        async function startScanner() {
+            if (state.isScanning) return;
             
             try {
-                updateStatus('Iniciando câmera...', 'info');
+                updateStatus('Iniciando scanner...', 'info');
                 
-                // Mostrar interface do scanner
-                readerElement.style.display = 'block';
-                startBtn.style.display = 'none';
-                cameraInfo.style.display = 'flex';
+                elements.reader.style.display = 'block';
+                elements.startBtn.style.display = 'none';
+                elements.cameraInfo.style.display = 'flex';
                 
-                const config = {
-                    fps: 30,
-                    qrbox: { width: 300, height: 200 },
-                    aspectRatio: 4/3,
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ]
-                };
+                state.scanner = new Html5Qrcode("reader");
                 
-                // Verificar se a biblioteca está disponível
-                if (typeof Html5Qrcode === 'undefined') {
-                    throw new Error('Biblioteca de scanner não carregada');
-                }
+                const cameraId = await findRearCamera();
+                const config = cameraId 
+                    ? createCameraConfig(cameraId)
+                    : createEnvironmentConfig();
                 
-                html5QrCode = new Html5Qrcode("reader");
+                await state.scanner.start(cameraId || { facingMode: "environment" }, config, onScanSuccess, onScanError);
                 
-                // Tentar encontrar câmera traseira
-                const rearCameraId = await findRearCamera();
-                
-                if (rearCameraId) {
-                    currentCameraId = rearCameraId;
-                    
-                    const cameraConfig = {
-                        ...config,
-                        videoConstraints: {
-                            deviceId: { exact: rearCameraId },
-                            width: { min: 1280, ideal: 1920, max: 2560 },
-                            height: { min: 720, ideal: 1080, max: 1440 },
-                            frameRate: { ideal: 30, min: 24 }
-                        }
-                    };
-                    
-                    await html5QrCode.start(
-                        rearCameraId,
-                        cameraConfig,
-                        onScanSuccess,
-                        onScanError
-                    );
-                    
-                } else {
-                    // Fallback para modo ambiente
-                    const fallbackConfig = {
-                        ...config,
-                        videoConstraints: {
-                            facingMode: { exact: "environment" },
-                            width: { min: 1280, ideal: 1920 },
-                            height: { min: 720, ideal: 1080 }
-                        }
-                    };
-                    
-                    await html5QrCode.start(
-                        { facingMode: "environment" },
-                        fallbackConfig,
-                        onScanSuccess,
-                        onScanError
-                    );
-                    
-                    currentCameraId = "environment";
-                }
-                
-                updateStatus('✅ Scanner ativo! Aponte para um código...', 'success');
-                isScanning = true;
-                stopBtn.disabled = false;
-                switchCameraBtn.disabled = false;
+                state.isScanning = true;
+                elements.stopBtn.disabled = false;
+                elements.switchCameraBtn.disabled = false;
+                updateStatus('✅ Scanner ativo - Aponte para um código', 'success');
                 
             } catch (error) {
-                console.error('Erro ao iniciar scanner:', error);
-                await handleScannerError(error);
+                handleScannerError(error);
             }
         }
         
         async function findRearCamera() {
             try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                    return null;
-                }
-                
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                cameras = devices.filter(device => device.kind === 'videoinput');
+                state.cameras = devices.filter(d => d.kind === 'videoinput');
                 
-                const exactCamera = cameras.find(device => 
-                    device.label && device.label.includes("camera 0, facing back")
-                );
-                
-                if (exactCamera) {
-                    currentCameraIndex = cameras.indexOf(exactCamera);
-                    return exactCamera.deviceId;
-                }
-                
-                const rearCamera = cameras.find(device => {
+                const rearKeywords = ["back", "rear", "environment", "traseira"];
+                const rearCamera = state.cameras.find(device => {
                     if (!device.label) return false;
                     const label = device.label.toLowerCase();
-                    return REAR_CAMERA_KEYWORDS.some(keyword => 
-                        label.includes(keyword.toLowerCase())
-                    );
+                    return rearKeywords.some(keyword => label.includes(keyword));
                 });
                 
                 if (rearCamera) {
-                    currentCameraIndex = cameras.indexOf(rearCamera);
+                    state.currentCameraIndex = state.cameras.indexOf(rearCamera);
                     return rearCamera.deviceId;
                 }
                 
-                if (cameras.length > 1) {
-                    currentCameraIndex = cameras.length - 1;
-                    return cameras[cameras.length - 1].deviceId;
-                }
-                
-                if (cameras.length === 1) {
-                    currentCameraIndex = 0;
-                    return cameras[0].deviceId;
-                }
-                
-                return null;
+                return state.cameras[0]?.deviceId || null;
                 
             } catch (error) {
-                console.error("Erro ao encontrar câmera:", error);
+                console.error('Erro ao buscar câmeras:', error);
                 return null;
             }
         }
         
-        async function handleScannerError(error) {
-            if (html5QrCode) {
-                try {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                } catch (e) {
-                    console.log('Erro ao parar scanner:', e);
+        function createCameraConfig(cameraId) {
+            return {
+                ...scannerConfig,
+                videoConstraints: {
+                    deviceId: { exact: cameraId },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
                 }
-            }
-            
-            isScanning = false;
-            html5QrCode = null;
-            currentCameraId = null;
-            
-            readerElement.style.display = 'none';
-            startBtn.style.display = 'inline-block';
-            cameraInfo.style.display = 'none';
-            stopBtn.disabled = true;
-            switchCameraBtn.disabled = true;
-            
-            if (error.message && error.message.includes('permission')) {
-                updateStatus('❌ Permissão da câmera negada.', 'error');
-            } else if (error.message && error.message.includes('NotFoundError')) {
-                updateStatus('❌ Nenhuma câmera encontrada.', 'error');
-            } else {
-                updateStatus('❌ Erro ao iniciar scanner.', 'error');
-            }
+            };
         }
         
-        function onScanError(error) {
-            if (!error || typeof error !== 'string' || !error.includes("No MultiFormat Readers")) {
-                console.log('Erro de scan:', error);
-            }
+        function createEnvironmentConfig() {
+            return {
+                ...scannerConfig,
+                videoConstraints: {
+                    facingMode: { exact: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
         }
         
-        // ========== FUNÇÃO ONSCANSUCCESS MODIFICADA ==========
-        function onScanSuccess(decodedText, decodedResult) {
-            const now = Date.now();
+        function onScanSuccess(decodedText) {
             const code = decodedText.trim();
+            const now = Date.now();
             
-            if (!isValidBarcode(code)) return;
-            if (code === lastScanned && (now - lastScanTime) < 2000) return;
+            if (!isValidCode(code)) return;
+            if (code === state.lastScanned && (now - state.lastScanTime) < 2000) return;
             
-            lastScanned = code;
-            lastScanTime = now;
+            state.lastScanned = code;
+            state.lastScanTime = now;
             
             updateStatus(`📷 Código detectado: ${code}`, 'success');
             
-            // PARAR O SCANNER IMEDIATAMENTE
-            if (html5QrCode) {
-                html5QrCode.pause();
+            if (state.scanner) {
+                state.scanner.pause();
                 setTimeout(() => {
-                    if (html5QrCode && isScanning) {
-                        html5QrCode.stop().then(() => {
-                            html5QrCode.clear();
-                            isScanning = false;
-                            
-                            // Fechar a visualização da câmera
-                            readerElement.style.display = 'none';
-                            startBtn.style.display = 'inline-block';
-                            cameraInfo.style.display = 'none';
-                            stopBtn.disabled = true;
-                            switchCameraBtn.disabled = true;
-                            
-                            // Mostrar modal de confirmação
-                            showConfirmationModal(code);
-                        });
-                    }
+                    stopScanner();
+                    showConfirmationModal(code);
                 }, 100);
             }
         }
         
-        function isValidBarcode(code) {
-            if (!/^\d+$/.test(code) && !isValidQRCode(code)) return false;
-            if (/^\d+$/.test(code) && (code.length < 8 || code.length > 13)) return false;
-            return true;
+        function onScanError(error) {
+            // Ignora erros comuns de leitura
+            if (typeof error === 'string' && error.includes("No MultiFormat Readers")) {
+                return;
+            }
+            console.log('Erro de scan:', error);
         }
         
-        function isValidQRCode(code) {
-            // QR Codes podem ter vários formatos, aceitamos qualquer texto
-            return code && code.trim().length > 0;
+        function handleScannerError(error) {
+            if (state.scanner) {
+                state.scanner.stop().catch(() => {});
+                state.scanner.clear();
+            }
+            
+            state.isScanning = false;
+            state.scanner = null;
+            
+            resetScannerUI();
+            
+            if (error.message?.includes('permission')) {
+                updateStatus('❌ Permissão da câmera negada', 'error');
+            } else if (error.message?.includes('NotFoundError')) {
+                updateStatus('❌ Nenhuma câmera encontrada', 'error');
+            } else {
+                updateStatus('❌ Erro ao iniciar scanner', 'error');
+            }
         }
         
         async function stopScanner() {
-            if (html5QrCode && isScanning) {
-                try {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                } catch (error) {
-                    console.log('Erro ao parar scanner:', error);
-                }
-                
-                isScanning = false;
-                html5QrCode = null;
-                currentCameraId = null;
-                
-                readerElement.style.display = 'none';
-                startBtn.style.display = 'inline-block';
-                cameraInfo.style.display = 'none';
-                stopBtn.disabled = true;
-                switchCameraBtn.disabled = true;
-                
-                updateStatus('⏹ Scanner parado.', 'info');
+            if (!state.scanner || !state.isScanning) return;
+            
+            try {
+                await state.scanner.stop();
+                state.scanner.clear();
+            } catch (error) {
+                console.log('Erro ao parar scanner:', error);
             }
+            
+            state.isScanning = false;
+            state.scanner = null;
+            resetScannerUI();
+            updateStatus('⏹ Scanner parado', 'info');
         }
         
         async function switchCamera() {
-            if (cameras.length > 1) {
-                // Parar scanner atual
-                if (html5QrCode && isScanning) {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                    
-                    // Alternar para próxima câmera
-                    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-                    currentCameraId = cameras[currentCameraIndex].deviceId;
-                    
-                    // Reiniciar scanner com nova câmera
-                    await initScannerWithCamera(currentCameraId);
-                }
-            }
+            if (state.cameras.length < 2 || !state.isScanning) return;
+            
+            await stopScanner();
+            state.currentCameraIndex = (state.currentCameraIndex + 1) % state.cameras.length;
+            setTimeout(startScanner, 300);
         }
         
-        async function initScannerWithCamera(cameraId) {
-            try {
-                const config = {
-                    fps: 30,
-                    qrbox: { width: 300, height: 200 },
-                    aspectRatio: 4/3,
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ]
-                };
-                
-                html5QrCode = new Html5Qrcode("reader");
-                
-                const cameraConfig = {
-                    ...config,
-                    videoConstraints: {
-                        deviceId: { exact: cameraId },
-                        width: { min: 1280, ideal: 1920 },
-                        height: { min: 720, ideal: 1080 }
-                    }
-                };
-                
-                await html5QrCode.start(
-                    cameraId,
-                    cameraConfig,
-                    onScanSuccess,
-                    onScanError
-                );
-                
-                isScanning = true;
-                updateStatus(`🔄 Alterado para ${cameras[currentCameraIndex].label || 'câmera'}`, 'success');
-                
-            } catch (error) {
-                console.error('Erro ao trocar câmera:', error);
-                updateStatus('❌ Erro ao trocar câmera', 'error');
-            }
+        function resetScannerUI() {
+            elements.reader.style.display = 'none';
+            elements.startBtn.style.display = 'inline-flex';
+            elements.cameraInfo.style.display = 'none';
+            elements.stopBtn.disabled = true;
+            elements.switchCameraBtn.disabled = true;
         }
         
-        // ========== MODAL DE CONFIRMAÇÃO ==========
+        // Validação
+        function isValidCode(code) {
+            if (!code || code.trim().length === 0) return false;
+            if (/^\d+$/.test(code)) {
+                return code.length >= 8 && code.length <= 13;
+            }
+            return true;
+        }
+        
+        // Modal de Confirmação
         function showConfirmationModal(code) {
-            scannedCodeElement.textContent = code;
-            quantityInput.value = 1;
-            quantityInput.focus();
+            elements.scannedCode.textContent = code;
+            elements.quantity.value = 1;
+            elements.confirmModal.style.display = 'flex';
+            elements.quantity.focus();
             
-            confirmModal.style.display = 'flex';
-            
-            // Vibrar se suportado (apenas mobile)
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
-            }
+            if (navigator.vibrate) navigator.vibrate(100);
         }
         
-        // Cancelar salvamento
-        cancelBtn.addEventListener('click', () => {
-            confirmModal.style.display = 'none';
-            
-            // Retomar scanner
-            setTimeout(() => {
-                if (html5QrCode) {
-                    initScanner();
-                }
-            }, 500);
-        });
+        function cancelSave() {
+            elements.confirmModal.style.display = 'none';
+            setTimeout(startScanner, 300);
+        }
         
-        // Salvar dados
-        saveBtn.addEventListener('click', async () => {
-            const quantidade = quantityInput.value.trim();
-            const code = scannedCodeElement.textContent;
+        // Google Sheets Integration
+        async function saveToSheets() {
+            const code = elements.scannedCode.textContent;
+            const quantity = elements.quantity.value.trim();
             
-            if (!quantidade || isNaN(quantidade) || quantidade < 1) {
-                updateStatus('❌ Digite uma quantidade válida!', 'error');
-                quantityInput.focus();
-                quantityInput.select();
+            if (!quantity || isNaN(quantity) || quantity < 1) {
+                updateStatus('❌ Digite uma quantidade válida', 'error');
+                elements.quantity.focus();
+                elements.quantity.select();
                 return;
             }
             
-            await saveToGoogleSheets(code, quantidade);
-        });
-        
-        // ========== GOOGLE SHEETS INTEGRATION ==========
-        async function saveToGoogleSheets(ean, quantidade) {
-            loading.style.display = 'block';
-            saveBtn.disabled = true;
-            cancelBtn.disabled = true;
+            elements.loading.style.display = 'block';
+            elements.saveBtn.disabled = true;
+            elements.cancelBtn.disabled = true;
             
             try {
-                const data = {
-                    ean: ean,
-                    quantidade: quantidade,
-                    timestamp: new Date().getTime()
-                };
+                await sendToGoogleSheets(code, quantity);
+                updateStatus(`✅ Salvo! ${code.substring(0, 15)}${code.length > 15 ? '...' : ''} - Qtd: ${quantity}`, 'success');
+                addToHistory(code, quantity);
                 
-                // Enviar para Google Sheets
-                await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                // Mostrar mensagem de sucesso
-                updateStatus(`✅ Salvo! EAN: ${ean.substring(0, 20)}${ean.length > 20 ? '...' : ''}, Qtd: ${quantidade}`, 'success');
-                
-                // Atualizar histórico
-                addToHistory(ean, quantidade);
-                
-                // Fechar modal após delay
                 setTimeout(() => {
-                    confirmModal.style.display = 'none';
-                    loading.style.display = 'none';
-                    saveBtn.disabled = false;
-                    cancelBtn.disabled = false;
-                    
-                    // Retomar scanner
-                    setTimeout(() => {
-                        if (html5QrCode) {
-                            initScanner();
-                        }
-                    }, 1000);
-                }, 1500);
+                    elements.confirmModal.style.display = 'none';
+                    elements.loading.style.display = 'none';
+                    elements.saveBtn.disabled = false;
+                    elements.cancelBtn.disabled = false;
+                    startScanner();
+                }, 1000);
                 
             } catch (error) {
-                console.error('Erro ao salvar:', error);
                 updateStatus('❌ Erro ao salvar. Verifique conexão.', 'error');
-                loading.style.display = 'none';
-                saveBtn.disabled = false;
-                cancelBtn.disabled = false;
+                elements.loading.style.display = 'none';
+                elements.saveBtn.disabled = false;
+                elements.cancelBtn.disabled = false;
             }
         }
         
-        // ========== HISTÓRICO LOCAL ==========
+        async function sendToGoogleSheets(ean, quantidade) {
+            const data = {
+                ean: ean,
+                quantidade: quantidade,
+                timestamp: Date.now()
+            };
+            
+            // Usando fetch com no-cors para Google Apps Script
+            await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+        }
+        
+        // Histórico
         function addToHistory(ean, quantidade) {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
+            const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            historyItem.innerHTML = `
-                <span>${timeString}</span> - EAN: ${ean} | Qtd: ${quantidade}
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <div>
+                    <span class="history-code">${ean}</span>
+                    <span class="history-time">${time}</span>
+                </div>
+                <span class="history-quantity">${quantidade} un</span>
             `;
             
-            historyList.prepend(historyItem);
+            elements.historyList.prepend(item);
             
-            // Manter apenas os últimos 10 itens
-            const items = historyList.querySelectorAll('.history-item');
+            // Limitar a 10 itens
+            const items = elements.historyList.querySelectorAll('.history-item');
             if (items.length > 10) {
                 items[items.length - 1].remove();
             }
         }
         
-        // Carregar histórico do localStorage ao iniciar
-        function loadHistoryFromLocalStorage() {
-            // Para um sistema real, você buscaria do Google Sheets
-            // Aqui usamos apenas o histórico da sessão atual
-            const items = [
-                { time: '10:30:45', ean: '7891234567890', qtd: '5' },
-                { time: '10:25:12', ean: '7896541239874', qtd: '2' },
-                { time: '10:20:33', ean: '7893216549871', qtd: '10' }
+        function loadSampleHistory() {
+            const samples = [
+                { ean: '7891234567890', quantidade: '5', time: '10:30' },
+                { ean: '7896541239874', quantidade: '2', time: '10:25' },
+                { ean: '7893216549871', quantidade: '10', time: '10:20' }
             ];
             
-            items.forEach(item => {
-                const historyItem = document.createElement('div');
-                historyItem.className = 'history-item';
-                historyItem.innerHTML = `
-                    <span>${item.time}</span> - EAN: ${item.ean} | Qtd: ${item.qtd}
+            samples.forEach(sample => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div>
+                        <span class="history-code">${sample.ean}</span>
+                        <span class="history-time">${sample.time}</span>
+                    </div>
+                    <span class="history-quantity">${sample.quantidade} un</span>
                 `;
-                historyList.appendChild(historyItem);
+                elements.historyList.appendChild(item);
             });
         }
         
-        // ========== FUNÇÕES AUXILIARES ==========
+        // Utilitários
         function updateStatus(message, type = 'info') {
-            statusMessage.textContent = message;
-            statusMessage.className = `status ${type}`;
-            statusMessage.style.display = 'block';
+            elements.status.textContent = message;
+            elements.status.className = `status ${type}`;
+            elements.status.style.display = 'flex';
             
-            // Auto-esconder após 5 segundos (exceto para erros)
             if (type !== 'error') {
                 setTimeout(() => {
-                    statusMessage.style.display = 'none';
-                }, 5000);
+                    elements.status.style.display = 'none';
+                }, 4000);
             }
         }
         
-        // Permitir salvar com Enter no campo quantidade
-        quantityInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                saveBtn.click();
-            }
-        });
-        
-        // Permitir cancelar com Escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && confirmModal.style.display === 'flex') {
-                cancelBtn.click();
-            }
-        });
-        
-        // ========== EVENT LISTENERS ==========
-        startBtn.addEventListener('click', initScanner);
-        stopBtn.addEventListener('click', stopScanner);
-        switchCameraBtn.addEventListener('click', switchCamera);
-        
-        // ========== INICIALIZAÇÃO ==========
+        // Inicializar aplicação
         document.addEventListener('DOMContentLoaded', () => {
-            // Solicitar permissão de câmera antecipadamente
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(() => {
-                        updateStatus('✅ Câmera autorizada. Clique em "Iniciar Scanner".', 'success');
-                    })
-                    .catch(err => {
-                        updateStatus('⚠️ Permissão de câmera necessária', 'warning');
-                    });
-            }
-            
-            // Carregar histórico de exemplo
-            loadHistoryFromLocalStorage();
+            init();
+            loadSampleHistory();
         });
     </script>
 </body>
