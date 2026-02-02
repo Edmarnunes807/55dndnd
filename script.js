@@ -1,7 +1,7 @@
 // ============================================
 // CONFIGURAÇÕES GLOBAIS
 // ============================================
-const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxzwzXNaJXVPvpFbxz5HHECAKq-Hi2UNlxdW31h8TqX/dev";
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbztmbLme_-QT7UjyZulntjbeoPD-vIA4Vqvp0chQiR5cZUYkwd-7DwMHlEqqvwB8_OrCw/exec";
 const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
 // ============================================
