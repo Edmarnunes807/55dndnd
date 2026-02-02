@@ -1,5 +1,5 @@
 // ========== CONFIGURAÇÕES ==========
-const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec";
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxi90miW5pVxtL78ZD8_8leS4XoN6BIGvtJNmm8yv2nDaNo8CdNxzJjLd0NcSWiI9NPww/exec";
 const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
 // ========== VARIÁVEIS GLOBAIS ==========
