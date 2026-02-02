@@ -1,5 +1,5 @@
 // ========== CONFIGURAÇÕES ==========
-const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxi90miW5pVxtL78ZD8_8leS4XoN6BIGvtJNmm8yv2nDaNo8CdNxzJjLd0NcSWiI9NPww/exec";
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec";
 const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
 // ========== VARIÁVEIS GLOBAIS ==========
@@ -69,7 +69,9 @@ async function initScanner() {
                     deviceId: { exact: rearCameraId },
                     width: { min: 1280, ideal: 1920, max: 2560 },
                     height: { min: 720, ideal: 1080, max: 1440 },
-                    frameRate: { ideal: 30, min: 24 }
+                    frameRate: { ideal: 30, min: 24 },
+                    // AUTOFOCUS ADICIONADO AQUI
+                    advanced: [{ focusMode: "continuous" }]
                 }
             };
             
@@ -80,6 +82,9 @@ async function initScanner() {
                 onScanError
             );
             
+            // ATIVAR AUTOFOCUS APÓS INICIAR
+            setTimeout(enableAutofocus, 1000);
+            
         } else {
             // Fallback para modo ambiente - EXATAMENTE como estava
             const fallbackConfig = {
@@ -87,7 +92,9 @@ async function initScanner() {
                 videoConstraints: {
                     facingMode: { exact: "environment" },
                     width: { min: 1280, ideal: 1920 },
-                    height: { min: 720, ideal: 1080 }
+                    height: { min: 720, ideal: 1080 },
+                    // AUTOFOCUS ADICIONADO AQUI
+                    advanced: [{ focusMode: "continuous" }]
                 }
             };
             
@@ -99,6 +106,9 @@ async function initScanner() {
             );
             
             currentCameraId = "environment";
+            
+            // ATIVAR AUTOFOCUS APÓS INICIAR
+            setTimeout(enableAutofocus, 1000);
         }
         
         updateStatus('✅ Scanner ativo! Aponte para um código...', 'success');
@@ -108,6 +118,94 @@ async function initScanner() {
     } catch (error) {
         console.error('Erro ao iniciar scanner:', error);
         await handleScannerError(error);
+    }
+}
+
+// ========== FUNÇÃO DE AUTOFOCUS (RESTAURADA) ==========
+async function enableAutofocus() {
+    try {
+        if (!html5QrCode || !isScanning) return;
+        
+        // Tentar obter o elemento de vídeo
+        const videoElement = document.querySelector('#reader video');
+        if (!videoElement) {
+            console.log('Elemento de vídeo não encontrado para autofocus');
+            return;
+        }
+        
+        // Obter a track de vídeo
+        const videoStream = videoElement.srcObject;
+        if (!videoStream) return;
+        
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+        
+        // Tentar aplicar configurações de foco
+        const capabilities = videoTrack.getCapabilities();
+        
+        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+            // Suporte a autofocus contínuo
+            await videoTrack.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }]
+            });
+            console.log('✅ Autofocus contínuo ativado');
+        } 
+        else if (capabilities.focusMode && capabilities.focusMode.includes('single-shot')) {
+            // Suporte a foco single-shot
+            await videoTrack.applyConstraints({
+                advanced: [{ focusMode: 'single-shot' }]
+            });
+            console.log('✅ Foco single-shot ativado');
+        }
+        else if (capabilities.focusDistance) {
+            // Ajustar distância de foco
+            await videoTrack.applyConstraints({
+                advanced: [{ focusDistance: 0 }] // 0 = foco automático
+            });
+            console.log('✅ Foco automático ajustado');
+        }
+        
+    } catch (focusError) {
+        console.log('⚠️  Não foi possível ativar autofocus:', focusError);
+        // Não é crítico, apenas log
+    }
+}
+
+// ========== FUNÇÃO PARA FORÇAR FOCO (ÚTIL PARA BAIXA LUMINOSIDADE) ==========
+async function forceFocus() {
+    try {
+        if (!html5QrCode || !isScanning) return;
+        
+        const videoElement = document.querySelector('#reader video');
+        if (!videoElement) return;
+        
+        const videoStream = videoElement.srcObject;
+        if (!videoStream) return;
+        
+        const videoTrack = videoStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+        
+        const capabilities = videoTrack.getCapabilities();
+        
+        // Tentar diferentes métodos de foco
+        if (capabilities.focusMode) {
+            // Ciclar entre modos de foco para forçar ajuste
+            await videoTrack.applyConstraints({
+                advanced: [{ focusMode: 'manual' }]
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            await videoTrack.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }]
+            });
+            
+            console.log('🔍 Foco forçado/reiniciado');
+            updateStatus('🔍 Ajustando foco...', 'info');
+        }
+        
+    } catch (error) {
+        console.log('Erro ao forçar foco:', error);
     }
 }
 
@@ -411,6 +509,37 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && confirmModal.style.display === 'flex') {
         cancelBtn.click();
     }
+    // Atalho para forçar foco (Ctrl+F)
+    if (e.ctrlKey && e.key === 'f' && isScanning) {
+        e.preventDefault();
+        forceFocus();
+    }
+});
+
+// ========== ADICIONAR BOTÃO DE CONTROLE DE FOCO ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionar botão de foco na interface
+    const focusBtn = document.createElement('button');
+    focusBtn.id = 'focusBtn';
+    focusBtn.className = 'btn';
+    focusBtn.innerHTML = '🔍 Forçar Foco';
+    focusBtn.style.display = 'none';
+    focusBtn.style.marginTop = '10px';
+    focusBtn.onclick = forceFocus;
+    
+    document.querySelector('.controls').appendChild(focusBtn);
+    
+    // Mostrar/ocultar botão de foco conforme estado do scanner
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.attributeName === 'style') {
+                const isScannerVisible = scannerContainer.style.display === 'block';
+                focusBtn.style.display = isScannerVisible ? 'inline-flex' : 'none';
+            }
+        });
+    });
+    
+    observer.observe(scannerContainer, { attributes: true });
 });
 
 // ========== INICIALIZAÇÃO ==========
