@@ -285,13 +285,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        .batch-info {
-            font-size: 12px;
-            color: #666;
-            margin-top: 10px;
-            font-style: italic;
-        }
-        
         /* Responsividade */
         @media (max-width: 768px) {
             .container {
@@ -382,84 +375,44 @@
     </div>
 
     <script>
-        // CONFIGURAÇÃO - SUBSTITUA ESTA URL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec';
-        
-        // Estado da aplicação
+        // ========== CONFIGURAÇÕES ==========
+        const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec";
+        const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
+
+        // ========== VARIÁVEIS GLOBAIS ==========
         let html5QrCode = null;
+        let currentCameraId = null;
         let isScanning = false;
         let lastScanned = '';
         let lastScanTime = 0;
-        let pendingItems = [];
-        
-        // Elementos DOM
-        const elements = {
-            reader: document.getElementById('reader'),
-            startBtn: document.getElementById('startBtn'),
-            stopBtn: document.getElementById('stopBtn'),
-            confirmModal: document.getElementById('confirmModal'),
-            scannedCode: document.getElementById('scannedCode'),
-            quantity: document.getElementById('quantity'),
-            cancelBtn: document.getElementById('cancelBtn'),
-            saveBtn: document.getElementById('saveBtn'),
-            statusMessage: document.getElementById('statusMessage'),
-            loading: document.getElementById('loading')
-        };
-        
-        // Inicialização
-        function init() {
-            setupEventListeners();
-            testApiConnection();
-        }
-        
-        function setupEventListeners() {
-            elements.startBtn.addEventListener('click', startScanner);
-            elements.stopBtn.addEventListener('click', stopScanner);
-            elements.cancelBtn.addEventListener('click', cancelSave);
-            elements.saveBtn.addEventListener('click', saveItem);
-            
-            elements.quantity.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') elements.saveBtn.click();
-            });
-            
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && elements.confirmModal.style.display === 'flex') {
-                    cancelSave();
-                }
-            });
-        }
-        
-        // Testar conexão com API
-        async function testApiConnection() {
-            try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?operation=ping`);
-                if (response.ok) {
-                    showStatus('✅ API conectada', 'success');
-                } else {
-                    showStatus('⚠️ API não responde', 'warning');
-                }
-            } catch (error) {
-                showStatus('❌ Erro na conexão com API', 'error');
-                console.error('Erro na conexão:', error);
-            }
-        }
-        
-        // Iniciar scanner
-        async function startScanner() {
+
+        // ========== ELEMENTOS DOM ==========
+        const readerElement = document.getElementById('reader');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const confirmModal = document.getElementById('confirmModal');
+        const scannedCodeElement = document.getElementById('scannedCode');
+        const quantityInput = document.getElementById('quantity');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const loading = document.getElementById('loading');
+
+        // ========== FUNÇÕES DO SCANNER (CÓDIGO ORIGINAL QUE FUNCIONA) ==========
+        async function initScanner() {
             if (isScanning) return;
             
             try {
-                showStatus('Iniciando scanner...', 'info');
+                updateStatus('Iniciando câmera...', 'info');
                 
-                // Mostrar scanner e trocar botões
-                elements.reader.style.display = 'block';
-                elements.startBtn.style.display = 'none';
-                elements.stopBtn.style.display = 'inline-flex';
+                // Mostrar interface do scanner
+                readerElement.style.display = 'block';
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-flex';
                 
-                // Configuração do scanner
                 const config = {
                     fps: 30,
-                    qrbox: { width: 280, height: 160 },
+                    qrbox: { width: 300, height: 200 },
                     aspectRatio: 4/3,
                     formatsToSupport: [
                         Html5QrcodeSupportedFormats.EAN_13,
@@ -472,224 +425,354 @@
                     ]
                 };
                 
-                // Verificar se a biblioteca está carregada
+                // Verificar se a biblioteca está disponível
                 if (typeof Html5Qrcode === 'undefined') {
                     throw new Error('Biblioteca de scanner não carregada');
                 }
                 
                 html5QrCode = new Html5Qrcode("reader");
                 
-                // Tentar usar câmera traseira (environment)
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    config,
-                    onScanSuccess,
-                    onScanError
-                );
+                // TENTAR USAR A CÂMERA 0 (TRASEIRA) PRIMEIRO
+                const cameras = await getCameras();
                 
+                if (cameras.length > 0) {
+                    // Tentar encontrar câmera traseira
+                    const rearCamera = findRearCamera(cameras);
+                    
+                    if (rearCamera) {
+                        currentCameraId = rearCamera.deviceId;
+                        
+                        const cameraConfig = {
+                            ...config,
+                            videoConstraints: {
+                                deviceId: { exact: rearCamera.deviceId },
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 },
+                                frameRate: { ideal: 30 }
+                            }
+                        };
+                        
+                        await html5QrCode.start(
+                            rearCamera.deviceId,
+                            cameraConfig,
+                            onScanSuccess,
+                            onScanError
+                        );
+                        
+                    } else {
+                        // Usar primeira câmera disponível
+                        currentCameraId = cameras[0].deviceId;
+                        
+                        const cameraConfig = {
+                            ...config,
+                            videoConstraints: {
+                                deviceId: { exact: cameras[0].deviceId },
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        };
+                        
+                        await html5QrCode.start(
+                            cameras[0].deviceId,
+                            cameraConfig,
+                            onScanSuccess,
+                            onScanError
+                        );
+                    }
+                } else {
+                    // Fallback para modo ambiente
+                    const fallbackConfig = {
+                        ...config,
+                        videoConstraints: {
+                            facingMode: { exact: "environment" },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    };
+                    
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        fallbackConfig,
+                        onScanSuccess,
+                        onScanError
+                    );
+                    
+                    currentCameraId = "environment";
+                }
+                
+                updateStatus('✅ Scanner ativo! Aponte para um código...', 'success');
                 isScanning = true;
-                showStatus('✅ Scanner ativo - Aponte para um código', 'success');
+                stopBtn.disabled = false;
                 
             } catch (error) {
                 console.error('Erro ao iniciar scanner:', error);
                 handleScannerError(error);
             }
         }
-        
-        // Sucesso no scan
-        function onScanSuccess(decodedText) {
-            const code = decodedText.trim();
+
+        async function getCameras() {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    return [];
+                }
+                
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                return devices.filter(device => device.kind === 'videoinput');
+            } catch (error) {
+                console.error("Erro ao buscar câmeras:", error);
+                return [];
+            }
+        }
+
+        function findRearCamera(cameras) {
+            // Procurar por câmera traseira
+            for (let camera of cameras) {
+                if (camera.label) {
+                    const label = camera.label.toLowerCase();
+                    if (REAR_CAMERA_KEYWORDS.some(keyword => label.includes(keyword))) {
+                        return camera;
+                    }
+                }
+            }
+            
+            // Se não encontrar, tentar câmera 0
+            if (cameras.length > 0) {
+                // Ordenar por label para tentar pegar a câmera padrão
+                const sortedCameras = [...cameras].sort((a, b) => {
+                    if (a.label && b.label) {
+                        return a.label.localeCompare(b.label);
+                    }
+                    return 0;
+                });
+                
+                return sortedCameras[0];
+            }
+            
+            return null;
+        }
+
+        function handleScannerError(error) {
+            if (html5QrCode) {
+                try {
+                    html5QrCode.stop().then(() => {
+                        html5QrCode.clear();
+                    }).catch(() => {});
+                } catch (e) {
+                    console.log('Erro ao parar scanner:', e);
+                }
+            }
+            
+            isScanning = false;
+            html5QrCode = null;
+            currentCameraId = null;
+            
+            readerElement.style.display = 'none';
+            startBtn.style.display = 'inline-flex';
+            stopBtn.style.display = 'none';
+            stopBtn.disabled = true;
+            
+            if (error.message && error.message.includes('permission')) {
+                updateStatus('❌ Permissão da câmera negada.', 'error');
+            } else if (error.message && error.message.includes('NotFoundError')) {
+                updateStatus('❌ Nenhuma câmera encontrada.', 'error');
+            } else {
+                updateStatus('❌ Erro ao iniciar scanner: ' + error.message, 'error');
+            }
+        }
+
+        function onScanError(error) {
+            // Ignorar erros de leitura normais
+            if (!error || typeof error !== 'string' || !error.includes("No MultiFormat Readers")) {
+                console.log('Erro de scan:', error);
+            }
+        }
+
+        // ========== FUNÇÃO ONSCANSUCCESS ORIGINAL ==========
+        function onScanSuccess(decodedText, decodedResult) {
             const now = Date.now();
+            const code = decodedText.trim();
             
-            // Validar código
-            if (!isValidCode(code)) return;
-            
-            // Debounce para evitar leituras duplicadas
-            if (code === lastScanned && (now - lastScanTime) < 1000) return;
+            if (!isValidBarcode(code)) return;
+            if (code === lastScanned && (now - lastScanTime) < 2000) return;
             
             lastScanned = code;
             lastScanTime = now;
             
-            // Parar scanner e mostrar modal
+            updateStatus(`📷 Código detectado: ${code}`, 'success');
+            
+            // PARAR O SCANNER IMEDIATAMENTE
             if (html5QrCode) {
                 html5QrCode.pause();
                 setTimeout(() => {
-                    stopScanner();
-                    showConfirmationModal(code);
+                    if (html5QrCode && isScanning) {
+                        html5QrCode.stop().then(() => {
+                            html5QrCode.clear();
+                            isScanning = false;
+                            
+                            // Fechar a visualização da câmera
+                            readerElement.style.display = 'none';
+                            startBtn.style.display = 'inline-flex';
+                            stopBtn.style.display = 'none';
+                            stopBtn.disabled = true;
+                            
+                            // Mostrar modal de confirmação
+                            showConfirmationModal(code);
+                        });
+                    }
                 }, 100);
             }
         }
-        
-        // Erro no scan
-        function onScanError(error) {
-            // Ignorar erros comuns
-            if (typeof error === 'string' && error.includes("No MultiFormat Readers")) {
-                return;
-            }
+
+        function isValidBarcode(code) {
+            if (!/^\d+$/.test(code) && !isValidQRCode(code)) return false;
+            if (/^\d+$/.test(code) && (code.length < 8 || code.length > 13)) return false;
+            return true;
         }
-        
-        // Parar scanner
+
+        function isValidQRCode(code) {
+            return code && code.trim().length > 0;
+        }
+
         async function stopScanner() {
-            if (!html5QrCode || !isScanning) return;
-            
-            try {
-                await html5QrCode.stop();
-                html5QrCode.clear();
-            } catch (error) {
-                console.log('Erro ao parar scanner:', error);
-            }
-            
-            isScanning = false;
-            html5QrCode = null;
-            
-            // Restaurar botões
-            elements.reader.style.display = 'none';
-            elements.startBtn.style.display = 'inline-flex';
-            elements.stopBtn.style.display = 'none';
-        }
-        
-        // Manipular erro do scanner
-        function handleScannerError(error) {
-            if (html5QrCode) {
-                html5QrCode.stop().catch(() => {});
-                html5QrCode.clear();
-            }
-            
-            isScanning = false;
-            html5QrCode = null;
-            
-            // Restaurar botões
-            elements.reader.style.display = 'none';
-            elements.startBtn.style.display = 'inline-flex';
-            elements.stopBtn.style.display = 'none';
-            
-            if (error.message?.includes('permission')) {
-                showStatus('❌ Permissão da câmera negada', 'error');
-            } else if (error.message?.includes('NotFoundError')) {
-                showStatus('❌ Nenhuma câmera encontrada', 'error');
-            } else {
-                showStatus('❌ Erro ao iniciar scanner', 'error');
+            if (html5QrCode && isScanning) {
+                try {
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
+                } catch (error) {
+                    console.log('Erro ao parar scanner:', error);
+                }
+                
+                isScanning = false;
+                html5QrCode = null;
+                currentCameraId = null;
+                
+                readerElement.style.display = 'none';
+                startBtn.style.display = 'inline-flex';
+                stopBtn.style.display = 'none';
+                stopBtn.disabled = true;
+                
+                updateStatus('⏹ Scanner parado.', 'info');
             }
         }
-        
-        // Validar código
-        function isValidCode(code) {
-            if (!code || code.trim().length === 0) return false;
-            if (/^\d+$/.test(code)) {
-                return code.length >= 8 && code.length <= 13;
-            }
-            return true; // Aceita QR codes também
-        }
-        
-        // Mostrar modal de confirmação
+
+        // ========== MODAL DE CONFIRMAÇÃO ==========
         function showConfirmationModal(code) {
-            elements.scannedCode.textContent = code;
-            elements.quantity.value = 1;
-            elements.confirmModal.style.display = 'flex';
-            elements.quantity.focus();
+            scannedCodeElement.textContent = code;
+            quantityInput.value = 1;
+            quantityInput.focus();
             
-            // Vibração no mobile
-            if (navigator.vibrate) navigator.vibrate(100);
-        }
-        
-        // Cancelar salvamento
-        function cancelSave() {
-            elements.confirmModal.style.display = 'none';
-            setTimeout(startScanner, 300);
-        }
-        
-        // Salvar item
-        async function saveItem() {
-            const code = elements.scannedCode.textContent;
-            const quantity = elements.quantity.value.trim();
+            confirmModal.style.display = 'flex';
             
-            if (!quantity || isNaN(quantity) || quantity < 1) {
-                showStatus('❌ Digite uma quantidade válida!', 'error');
-                elements.quantity.focus();
-                elements.quantity.select();
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+        }
+
+        // ========== FUNÇÕES DE SALVAMENTO ==========
+        async function saveToGoogleSheets() {
+            const quantidade = quantityInput.value.trim();
+            const code = scannedCodeElement.textContent;
+            
+            if (!quantidade || isNaN(quantidade) || quantidade < 1) {
+                updateStatus('❌ Digite uma quantidade válida!', 'error');
+                quantityInput.focus();
+                quantityInput.select();
                 return;
             }
             
-            // Preparar item
-            const item = {
-                ean: code,
-                quantidade: parseInt(quantity),
-                timestamp: Date.now()
-            };
+            loading.style.display = 'block';
+            saveBtn.disabled = true;
+            cancelBtn.disabled = true;
             
-            // Adicionar ao array de itens pendentes
-            pendingItems.push(item);
-            
-            // Mostrar loading
-            elements.loading.style.display = 'block';
-            elements.saveBtn.disabled = true;
-            elements.cancelBtn.disabled = true;
-            
-            // Enviar para API
-            const success = await sendToApi(item);
-            
-            // Resetar interface
-            elements.loading.style.display = 'none';
-            elements.saveBtn.disabled = false;
-            elements.cancelBtn.disabled = false;
-            
-            if (success) {
-                elements.confirmModal.style.display = 'none';
-                setTimeout(startScanner, 300);
-            }
-        }
-        
-        // Enviar para API
-        async function sendToApi(item) {
             try {
-                // Preparar dados para envio em lote
                 const data = {
-                    operation: 'save_batch',
-                    items: [item] // Mesmo item único vai como array para usar batch
+                    ean: code,
+                    quantidade: quantidade,
+                    timestamp: new Date().getTime()
                 };
                 
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                // Enviar para Google Sheets usando POST
+                await fetch(GOOGLE_SHEETS_API, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    mode: 'no-cors', // Para Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
                     body: JSON.stringify(data)
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
+                updateStatus(`✅ Salvo! EAN: ${code.substring(0, 20)}${code.length > 20 ? '...' : ''}, Qtd: ${quantidade}`, 'success');
                 
-                const result = await response.json();
-                
-                if (result.success) {
-                    showStatus('✅ Item salvo com sucesso!', 'success');
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                    return true;
-                } else {
-                    throw new Error(result.error || 'Erro desconhecido');
-                }
+                // Fechar modal após delay
+                setTimeout(() => {
+                    confirmModal.style.display = 'none';
+                    loading.style.display = 'none';
+                    saveBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                    
+                    // Retomar scanner
+                    setTimeout(() => {
+                        initScanner();
+                    }, 1000);
+                }, 1500);
                 
             } catch (error) {
-                console.error('Erro ao enviar:', error);
-                showStatus('❌ Erro ao salvar. Tente novamente.', 'error');
-                return false;
+                console.error('Erro ao salvar:', error);
+                updateStatus('❌ Erro ao salvar. Verifique conexão.', 'error');
+                loading.style.display = 'none';
+                saveBtn.disabled = false;
+                cancelBtn.disabled = false;
             }
         }
-        
-        // Mostrar status
-        function showStatus(message, type = 'info') {
-            elements.statusMessage.textContent = message;
-            elements.statusMessage.className = `status ${type} show`;
+
+        // ========== FUNÇÕES AUXILIARES ==========
+        function updateStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status ${type} show`;
             
-            // Auto-esconder após alguns segundos
-            setTimeout(() => {
-                if (elements.statusMessage.textContent === message) {
-                    elements.statusMessage.classList.remove('show');
-                }
-            }, 3000);
+            if (type !== 'error') {
+                setTimeout(() => {
+                    statusMessage.classList.remove('show');
+                }, 5000);
+            }
         }
+
+        // ========== EVENT LISTENERS ==========
+        startBtn.addEventListener('click', initScanner);
+        stopBtn.addEventListener('click', stopScanner);
+        cancelBtn.addEventListener('click', () => {
+            confirmModal.style.display = 'none';
+            setTimeout(() => {
+                initScanner();
+            }, 500);
+        });
+        saveBtn.addEventListener('click', saveToGoogleSheets);
         
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', init);
+        quantityInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                saveBtn.click();
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && confirmModal.style.display === 'flex') {
+                cancelBtn.click();
+            }
+        });
+
+        // ========== INICIALIZAÇÃO ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verificar permissão de câmera antecipadamente
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(() => {
+                        updateStatus('✅ Câmera autorizada. Clique em "Iniciar Scanner".', 'success');
+                    })
+                    .catch(err => {
+                        updateStatus('⚠️ Permissão de câmera necessária', 'warning');
+                    });
+            }
+        });
     </script>
 </body>
 </html>
