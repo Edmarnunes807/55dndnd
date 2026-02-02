@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// FUNÇÕES DO SCANNER (EXATAMENTE COMO ANTES)
+// FUNÇÕES DO SCANNER
 // ============================================
 async function initScanner() {
     if (isScanning) return;
@@ -333,13 +333,23 @@ async function enableAutofocus() {
 }
 
 // ============================================
-// FUNÇÕES DA API
+// FUNÇÕES DA API - AGORA COM POST
 // ============================================
 async function testApiConnection() {
     try {
         updateStatus('🔗 Testando conexão...', 'info');
         
-        const response = await fetch(`${GOOGLE_SHEETS_API}?operation=ping&t=${Date.now()}`);
+        // USANDO POST AGORA
+        const formData = new URLSearchParams();
+        formData.append('operation', 'ping');
+        
+        const response = await fetch(GOOGLE_SHEETS_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData
+        });
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -377,28 +387,45 @@ async function saveToGoogleSheets() {
     cancelBtn.disabled = true;
     
     try {
-        // Construir URL GET
-        const params = new URLSearchParams({
+        // CRIAR FORM DATA PARA ENVIAR VIA POST
+        const formData = new URLSearchParams();
+        formData.append('operation', 'save');
+        formData.append('ean', code);
+        formData.append('quantidade', parseInt(quantidade));
+        formData.append('timestamp', new Date().getTime());
+        formData.append('source', 'scanner_app');
+        
+        console.log('📤 Enviando dados via POST:', {
             operation: 'save',
             ean: code,
-            quantidade: parseInt(quantidade),
-            timestamp: new Date().getTime(),
-            source: 'scanner_app'
+            quantidade: parseInt(quantidade)
         });
         
-        const url = `${GOOGLE_SHEETS_API}?${params.toString()}`;
+        // FAZER REQUISIÇÃO POST
+        const response = await fetch(GOOGLE_SHEETS_API, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData
+        });
         
-        // Fazer requisição GET
-        const response = await fetch(url);
+        console.log('📥 Status da resposta:', response.status);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
         
         const result = await response.json();
+        console.log('📥 Resposta do servidor:', result);
         
         if (result.success) {
             updateStatus(`✅ Salvo! ${code} x${quantidade}`, 'success');
+            
+            // Feedback tátil
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
             
             // Fechar modal após sucesso
             setTimeout(() => {
@@ -410,7 +437,15 @@ async function saveToGoogleSheets() {
         }
         
     } catch (error) {
-        updateStatus(`❌ Erro: ${error.message}`, 'error');
+        console.error('❌ Erro ao salvar:', error);
+        
+        // Mensagem de erro amigável
+        let userMessage = error.message;
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            userMessage = 'Falha na conexão. Verifique sua internet.';
+        }
+        
+        updateStatus(`❌ ${userMessage}`, 'error');
         
         loading.style.display = 'none';
         saveBtn.disabled = false;
