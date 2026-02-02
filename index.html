@@ -3,18 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner EAN/QR Code</title>
+    <title>Scanner EAN/QR Code - Modo Lote</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #667eea;
+            --primary-dark: #764ba2;
+            --danger: #dc3545;
+            --success: #28a745;
+            --warning: #f59e0b;
+            --secondary: #6c757d;
+            --light: #f8f9fa;
+            --dark: #343a40;
+            --border: #dee2e6;
         }
         
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             min-height: 100vh;
             padding: 20px;
             display: flex;
@@ -22,25 +30,41 @@
         }
         
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             overflow: hidden;
             flex: 1;
         }
         
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
+        }
+        
+        .batch-mode-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 22px;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
         
         .header p {
@@ -49,9 +73,7 @@
         }
         
         .scanner-container {
-            padding: 15px;
-            text-align: center;
-            flex: 1;
+            padding: 20px;
         }
         
         #reader {
@@ -59,10 +81,11 @@
             height: 300px;
             background: #000;
             margin: 0 auto 15px;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             position: relative;
             display: none;
+            border: 3px solid var(--primary);
         }
         
         .scanner-frame {
@@ -73,160 +96,179 @@
             width: 80%;
             height: 150px;
             border: 3px solid #00ff00;
-            border-radius: 10px;
+            border-radius: 8px;
             box-shadow: 0 0 0 1000px rgba(0,0,0,0.7);
             pointer-events: none;
             z-index: 10;
         }
         
-        .scanner-frame::before {
-            content: '';
+        .scanner-line {
             position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 3px;
-            background: #00ff00;
-            animation: scanLine 2s linear infinite;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            animation: scanLine 2s ease-in-out infinite;
         }
         
         @keyframes scanLine {
-            0% { top: -10px; }
-            50% { top: calc(100% + 10px); }
-            51% { top: -10px; }
-            100% { top: -10px; }
+            0%, 100% { top: 0; opacity: 1; }
+            50% { top: 100%; opacity: 0.5; }
         }
         
         .controls {
-            margin: 15px 0;
+            margin: 20px 0;
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
         }
         
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 50px;
+            padding: 12px 24px;
+            border-radius: 25px;
             font-size: 14px;
+            font-weight: 500;
             cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-            display: flex;
+            transition: all 0.2s;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            min-width: 120px;
+            min-width: 140px;
         }
         
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 15px rgba(102, 126, 234, 0.3);
         }
         
-        .btn-secondary {
-            background: #6c757d;
+        .btn:active {
+            transform: translateY(0);
         }
         
-        .btn-danger {
-            background: #dc3545;
+        .btn-secondary { background: var(--secondary); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
         }
         
-        .btn-success {
-            background: #28a745;
+        .status {
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 8px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
         }
         
-        /* Modal de Confirmação */
+        .status.success { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+        .status.error { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        .status.info { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+        .status.warning { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        
+        /* Modal */
         .modal {
-            display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
+            background: rgba(0,0,0,0.85);
+            display: none;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(5px);
+            z-index: 1000;
+            padding: 20px;
+            backdrop-filter: blur(4px);
         }
         
         .modal-content {
             background: white;
             padding: 25px;
-            border-radius: 15px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            animation: modalSlideIn 0.3s ease-out;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border-radius: 12px;
+            max-width: 450px;
+            width: 100%;
+            animation: modalIn 0.3s ease-out;
         }
         
-        @keyframes modalSlideIn {
-            from {
-                transform: translateY(-50px) scale(0.9);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         
         .modal h2 {
-            color: #667eea;
-            margin-bottom: 15px;
+            color: var(--primary);
+            margin-bottom: 16px;
             font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
-        .ean-display {
-            font-size: 20px;
-            font-weight: bold;
-            color: #333;
-            margin: 15px 0;
+        .scanned-code {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 16px 0;
             padding: 12px;
-            background: #f8f9fa;
+            background: var(--light);
             border-radius: 8px;
             word-break: break-all;
             font-family: monospace;
-            border: 2px dashed #667eea;
+            border: 2px solid var(--border);
+            text-align: center;
         }
         
         .input-group {
-            margin: 15px 0;
-            text-align: left;
+            margin: 20px 0;
         }
         
         .input-group label {
             display: block;
             margin-bottom: 8px;
-            color: #555;
+            color: var(--dark);
             font-weight: 500;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .input-group input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #ddd;
+            padding: 14px;
+            border: 2px solid var(--border);
             border-radius: 8px;
-            font-size: 18px;
-            transition: border-color 0.3s;
+            font-size: 16px;
             text-align: center;
+            transition: border-color 0.3s;
         }
         
         .input-group input:focus {
-            border-color: #667eea;
             outline: none;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         .modal-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 24px;
         }
         
         .modal-buttons button {
@@ -234,81 +276,153 @@
             padding: 12px;
         }
         
-        /* Histórico */
-        .history {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            max-height: 200px;
-            overflow-y: auto;
+        /* Painel de Lote */
+        .batch-panel {
+            padding: 20px;
             background: #f8f9fa;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
         }
         
-        .history h3 {
-            margin-bottom: 10px;
-            color: #333;
+        .batch-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .batch-header h3 {
+            color: var(--dark);
             font-size: 16px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
         
-        .history-item {
-            padding: 8px 12px;
-            background: white;
-            margin-bottom: 6px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
-            font-size: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .history-item span {
-            font-weight: bold;
-            color: #667eea;
-        }
-        
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 8px;
-            display: none;
+        .batch-counter {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
             font-size: 14px;
         }
         
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-            display: block;
+        .batch-items {
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--border);
         }
         
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-            display: block;
+        .batch-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
         }
         
-        .status.info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-            display: block;
+        .batch-item:hover {
+            background: #f8f9fa;
         }
         
+        .batch-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-code {
+            font-family: monospace;
+            font-weight: 500;
+            color: var(--primary);
+        }
+        
+        .item-quantity {
+            color: var(--success);
+            font-weight: 600;
+        }
+        
+        .remove-item {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 16px;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .remove-item:hover {
+            background: #fee2e2;
+        }
+        
+        .batch-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .batch-actions .btn {
+            flex: 1;
+        }
+        
+        /* Histórico */
+        .history {
+            padding: 20px;
+        }
+        
+        .history h3 {
+            margin-bottom: 16px;
+            color: var(--dark);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 10px 12px;
+            background: white;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+            font-size: 13px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .history-time {
+            color: var(--secondary);
+            font-size: 11px;
+        }
+        
+        /* Loading */
         .loading {
             display: none;
             text-align: center;
-            margin: 15px 0;
+            margin: 16px 0;
         }
         
-        .loading::after {
-            content: '';
+        .spinner {
             display: inline-block;
-            width: 25px;
-            height: 25px;
-            border: 3px solid #ddd;
-            border-top: 3px solid #667eea;
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -320,10 +434,10 @@
         
         .camera-info {
             background: #e9ecef;
-            padding: 8px 12px;
+            padding: 10px 16px;
             border-radius: 8px;
-            margin: 10px 0;
-            font-size: 12px;
+            margin: 16px 0;
+            font-size: 13px;
             color: #495057;
             display: none;
             align-items: center;
@@ -331,626 +445,743 @@
             gap: 8px;
         }
         
-        .camera-info span {
-            font-weight: bold;
-            color: #667eea;
-        }
-        
-        /* Responsividade para mobile */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            .header {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 20px;
-            }
-            
-            #reader {
-                height: 250px;
-            }
-            
-            .scanner-frame {
-                height: 120px;
-            }
-            
-            .btn {
-                padding: 10px 15px;
-                font-size: 13px;
-                min-width: 110px;
-            }
-            
-            .modal-content {
-                padding: 20px;
-            }
-            
-            .ean-display {
-                font-size: 18px;
-                padding: 10px;
-            }
-            
-            .history {
-                max-height: 150px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            #reader {
-                height: 200px;
-            }
-            
-            .scanner-frame {
-                height: 100px;
-            }
-            
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .btn {
-                width: 100%;
-                max-width: 250px;
-            }
-            
-            .modal-buttons {
-                flex-direction: column;
-            }
+            body { padding: 10px; }
+            .header { padding: 16px; }
+            .scanner-container { padding: 16px; }
+            #reader { height: 250px; }
+            .btn { min-width: 120px; padding: 10px 20px; }
+            .modal-content { padding: 20px; }
+            .modal-buttons { flex-direction: column; }
+            .batch-actions { flex-direction: column; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📱 Scanner de EAN/QR Code</h1>
-            <p>Use a câmera traseira para escanear códigos</p>
+            <div class="batch-mode-badge">
+                <span>📦</span> MODO LOTE
+            </div>
+            <h1>📱 Scanner EAN/QR Code</h1>
+            <p>Escaneie múltiplos itens e envie em lote para o Google Sheets</p>
         </div>
         
         <div class="scanner-container">
             <div id="reader">
-                <div class="scanner-frame"></div>
+                <div class="scanner-frame">
+                    <div class="scanner-line"></div>
+                </div>
             </div>
             
             <div class="camera-info" id="cameraInfo">
-                📸 Usando câmera traseira | 🔍 Auto-foco ativo
+                📸 Câmera traseira | 🔍 Auto-foco ativo
             </div>
             
             <div class="controls">
                 <button id="startBtn" class="btn">▶ Iniciar Scanner</button>
                 <button id="stopBtn" class="btn btn-secondary" disabled>⏹ Parar</button>
-                <button id="switchCamera" class="btn">🔄 Trocar Câmera</button>
+                <button id="switchCameraBtn" class="btn">🔄 Trocar Câmera</button>
             </div>
             
-            <div class="status" id="statusMessage"></div>
+            <div class="status" id="statusMessage">✅ Pronto para iniciar</div>
+        </div>
+        
+        <div class="batch-panel">
+            <div class="batch-header">
+                <h3>
+                    <span>📦</span> Itens no Lote
+                    <span class="batch-counter" id="batchCounter">0</span>
+                </h3>
+                <button id="clearBatchBtn" class="btn btn-danger btn-small">🗑️ Limpar</button>
+            </div>
             
-            <div class="loading" id="loading">Enviando dados...</div>
+            <div class="batch-items" id="batchItems">
+                <!-- Itens do lote serão inseridos aqui -->
+            </div>
+            
+            <div class="batch-actions">
+                <button id="sendBatchBtn" class="btn btn-success" disabled>
+                    <span>🚀</span> Enviar Lote
+                </button>
+                <button id="saveSingleBtn" class="btn btn-warning" disabled>
+                    <span>💾</span> Salvar Individual
+                </button>
+            </div>
+            
+            <div class="loading" id="batchLoading">
+                <div class="spinner"></div>
+                <p style="margin-top: 8px; font-size: 14px; color: var(--secondary);" id="loadingText">Processando...</p>
+            </div>
         </div>
         
         <div class="history">
-            <h3>📋 Histórico Recente</h3>
-            <div id="historyList">
-                <!-- Histórico será carregado aqui -->
+            <h3>📋 Últimos Envios</h3>
+            <div class="history-list" id="historyList">
+                <!-- Histórico será inserido aqui -->
             </div>
         </div>
     </div>
     
-    <!-- Modal de Confirmação -->
-    <div class="modal" id="confirmModal">
+    <!-- Modal para item individual -->
+    <div class="modal" id="singleModal">
         <div class="modal-content">
-            <h2>Confirme os Dados</h2>
+            <h2>
+                <span>✏️</span> Item Individual
+            </h2>
             <p>Código escaneado:</p>
-            <div class="ean-display" id="scannedCode">1234567890123</div>
+            <div class="scanned-code" id="singleCode"></div>
             
             <div class="input-group">
-                <label for="quantity">Quantidade:</label>
-                <input type="number" id="quantity" min="1" value="1" placeholder="Digite a quantidade" autofocus>
+                <label for="singleQuantity">
+                    <span>🔢</span> Quantidade:
+                </label>
+                <input type="number" id="singleQuantity" min="1" value="1" autofocus>
             </div>
             
             <div class="modal-buttons">
-                <button id="cancelBtn" class="btn btn-danger">✖ Cancelar</button>
-                <button id="saveBtn" class="btn btn-success">💾 Salvar</button>
+                <button id="cancelSingleBtn" class="btn btn-danger">✖ Cancelar</button>
+                <button id="saveSingleModalBtn" class="btn btn-success">💾 Salvar</button>
             </div>
         </div>
     </div>
     
+    <!-- Modal para adicionar ao lote -->
+    <div class="modal" id="batchModal">
+        <div class="modal-content">
+            <h2>
+                <span>📦</span> Adicionar ao Lote
+            </h2>
+            <p>Código escaneado:</p>
+            <div class="scanned-code" id="batchCode"></div>
+            
+            <div class="input-group">
+                <label for="batchQuantity">
+                    <span>🔢</span> Quantidade:
+                </label>
+                <input type="number" id="batchQuantity" min="1" value="1" autofocus>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="cancelBatchBtn" class="btn btn-danger">✖ Cancelar</button>
+                <button id="addToBatchBtn" class="btn btn-success">➕ Adicionar ao Lote</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ========== CONFIGURAÇÕES ==========
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxykTkoKMU7MI8bGuBpuTQOogW9F4sGUCKnSzhrRV3M8KD1eg8RhPUjd9ThiAcMpVerxw/exec';
-        const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
-
-        // ========== VARIÁVEIS GLOBAIS ==========
-        let html5QrCode = null;
-        let currentCameraId = null;
-        let isScanning = false;
-        let lastScanned = '';
-        let lastScanTime = 0;
-        let cameras = [];
-        let currentCameraIndex = 0;
-
-        // ========== ELEMENTOS DOM ==========
-        const readerElement = document.getElementById('reader');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const switchCameraBtn = document.getElementById('switchCamera');
-        const confirmModal = document.getElementById('confirmModal');
-        const scannedCodeElement = document.getElementById('scannedCode');
-        const quantityInput = document.getElementById('quantity');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const saveBtn = document.getElementById('saveBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const loading = document.getElementById('loading');
-        const historyList = document.getElementById('historyList');
-        const cameraInfo = document.getElementById('cameraInfo');
-
-        // ========== FUNÇÕES DO SCANNER (EXATAMENTE COMO ESTAVA FUNCIONANDO) ==========
-        async function initScanner() {
-            if (isScanning) return;
+        // Configurações
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec';
+        
+        // Estado da aplicação
+        const state = {
+            scanner: null,
+            cameraId: null,
+            isScanning: false,
+            lastScanned: '',
+            cameras: [],
+            currentCameraIndex: 0,
+            batchItems: [],
+            currentScannedCode: ''
+        };
+        
+        // Elementos DOM
+        const elements = {
+            reader: document.getElementById('reader'),
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            switchCameraBtn: document.getElementById('switchCameraBtn'),
+            status: document.getElementById('statusMessage'),
+            cameraInfo: document.getElementById('cameraInfo'),
+            
+            // Modais
+            singleModal: document.getElementById('singleModal'),
+            batchModal: document.getElementById('batchModal'),
+            
+            // Modais - Single
+            singleCode: document.getElementById('singleCode'),
+            singleQuantity: document.getElementById('singleQuantity'),
+            cancelSingleBtn: document.getElementById('cancelSingleBtn'),
+            saveSingleModalBtn: document.getElementById('saveSingleModalBtn'),
+            
+            // Modais - Batch
+            batchCode: document.getElementById('batchCode'),
+            batchQuantity: document.getElementById('batchQuantity'),
+            cancelBatchBtn: document.getElementById('cancelBatchBtn'),
+            addToBatchBtn: document.getElementById('addToBatchBtn'),
+            
+            // Painel de lote
+            batchCounter: document.getElementById('batchCounter'),
+            batchItems: document.getElementById('batchItems'),
+            clearBatchBtn: document.getElementById('clearBatchBtn'),
+            sendBatchBtn: document.getElementById('sendBatchBtn'),
+            saveSingleBtn: document.getElementById('saveSingleBtn'),
+            batchLoading: document.getElementById('batchLoading'),
+            loadingText: document.getElementById('loadingText'),
+            
+            // Histórico
+            historyList: document.getElementById('historyList')
+        };
+        
+        // Configuração do scanner
+        const scannerConfig = {
+            fps: 30,
+            qrbox: { width: 280, height: 160 },
+            aspectRatio: 4/3,
+            formatsToSupport: [
+                Html5QrcodeSupportedFormats.EAN_13,
+                Html5QrcodeSupportedFormats.EAN_8,
+                Html5QrcodeSupportedFormats.UPC_A,
+                Html5QrcodeSupportedFormats.UPC_E,
+                Html5QrcodeSupportedFormats.CODE_128,
+                Html5QrcodeSupportedFormats.CODE_39,
+                Html5QrcodeSupportedFormats.QR_CODE
+            ]
+        };
+        
+        // Inicialização
+        function init() {
+            setupEventListeners();
+            checkCameraPermission();
+            updateBatchUI();
+            loadHistoryFromLocalStorage();
+        }
+        
+        function setupEventListeners() {
+            // Controles do scanner
+            elements.startBtn.addEventListener('click', startScanner);
+            elements.stopBtn.addEventListener('click', stopScanner);
+            elements.switchCameraBtn.addEventListener('click', switchCamera);
+            
+            // Modais - Single
+            elements.cancelSingleBtn.addEventListener('click', () => closeModal('single'));
+            elements.saveSingleModalBtn.addEventListener('click', saveSingleItem);
+            elements.singleQuantity.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') elements.saveSingleModalBtn.click();
+            });
+            
+            // Modais - Batch
+            elements.cancelBatchBtn.addEventListener('click', () => closeModal('batch'));
+            elements.addToBatchBtn.addEventListener('click', addToBatch);
+            elements.batchQuantity.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') elements.addToBatchBtn.click();
+            });
+            
+            // Painel de lote
+            elements.clearBatchBtn.addEventListener('click', clearBatch);
+            elements.sendBatchBtn.addEventListener('click', sendBatch);
+            elements.saveSingleBtn.addEventListener('click', () => showSingleModal(state.currentScannedCode));
+            
+            // Teclas de atalho
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (elements.singleModal.style.display === 'flex') closeModal('single');
+                    if (elements.batchModal.style.display === 'flex') closeModal('batch');
+                }
+                if (e.key === 'Enter' && e.ctrlKey && state.batchItems.length > 0) {
+                    sendBatch();
+                }
+            });
+        }
+        
+        // ==================== SCANNER FUNCTIONS ====================
+        async function startScanner() {
+            if (state.isScanning) return;
             
             try {
-                updateStatus('Iniciando câmera...', 'info');
+                updateStatus('Iniciando scanner...', 'info');
                 
-                // Mostrar interface do scanner
-                readerElement.style.display = 'block';
-                startBtn.style.display = 'none';
-                cameraInfo.style.display = 'flex';
+                elements.reader.style.display = 'block';
+                elements.startBtn.style.display = 'none';
+                elements.cameraInfo.style.display = 'flex';
                 
-                const config = {
-                    fps: 30,
-                    qrbox: { width: 300, height: 200 },
-                    aspectRatio: 4/3,
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ]
-                };
+                state.scanner = new Html5Qrcode("reader");
                 
-                // Verificar se a biblioteca está disponível
-                if (typeof Html5Qrcode === 'undefined') {
-                    throw new Error('Biblioteca de scanner não carregada');
-                }
+                const cameraId = await findRearCamera();
+                const config = cameraId 
+                    ? createCameraConfig(cameraId)
+                    : createEnvironmentConfig();
                 
-                html5QrCode = new Html5Qrcode("reader");
+                await state.scanner.start(cameraId || { facingMode: "environment" }, config, onScanSuccess, onScanError);
                 
-                // Tentar encontrar câmera traseira
-                const rearCameraId = await findRearCamera();
-                
-                if (rearCameraId) {
-                    currentCameraId = rearCameraId;
-                    
-                    const cameraConfig = {
-                        ...config,
-                        videoConstraints: {
-                            deviceId: { exact: rearCameraId },
-                            width: { min: 1280, ideal: 1920, max: 2560 },
-                            height: { min: 720, ideal: 1080, max: 1440 },
-                            frameRate: { ideal: 30, min: 24 }
-                        }
-                    };
-                    
-                    await html5QrCode.start(
-                        rearCameraId,
-                        cameraConfig,
-                        onScanSuccess,
-                        onScanError
-                    );
-                    
-                } else {
-                    // Fallback para modo ambiente
-                    const fallbackConfig = {
-                        ...config,
-                        videoConstraints: {
-                            facingMode: { exact: "environment" },
-                            width: { min: 1280, ideal: 1920 },
-                            height: { min: 720, ideal: 1080 }
-                        }
-                    };
-                    
-                    await html5QrCode.start(
-                        { facingMode: "environment" },
-                        fallbackConfig,
-                        onScanSuccess,
-                        onScanError
-                    );
-                    
-                    currentCameraId = "environment";
-                }
-                
-                updateStatus('✅ Scanner ativo! Aponte para um código...', 'success');
-                isScanning = true;
-                stopBtn.disabled = false;
-                switchCameraBtn.disabled = false;
+                state.isScanning = true;
+                elements.stopBtn.disabled = false;
+                elements.switchCameraBtn.disabled = false;
+                updateStatus('✅ Scanner ativo - Escaneie um código', 'success');
                 
             } catch (error) {
-                console.error('Erro ao iniciar scanner:', error);
-                await handleScannerError(error);
+                handleScannerError(error);
             }
         }
-
+        
         async function findRearCamera() {
             try {
-                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                    return null;
-                }
-                
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                cameras = devices.filter(device => device.kind === 'videoinput');
+                state.cameras = devices.filter(d => d.kind === 'videoinput');
                 
-                const exactCamera = cameras.find(device => 
-                    device.label && device.label.includes("camera 0, facing back")
-                );
-                
-                if (exactCamera) {
-                    currentCameraIndex = cameras.indexOf(exactCamera);
-                    return exactCamera.deviceId;
-                }
-                
-                const rearCamera = cameras.find(device => {
+                const rearKeywords = ["back", "rear", "environment", "traseira"];
+                const rearCamera = state.cameras.find(device => {
                     if (!device.label) return false;
                     const label = device.label.toLowerCase();
-                    return REAR_CAMERA_KEYWORDS.some(keyword => 
-                        label.includes(keyword.toLowerCase())
-                    );
+                    return rearKeywords.some(keyword => label.includes(keyword));
                 });
                 
                 if (rearCamera) {
-                    currentCameraIndex = cameras.indexOf(rearCamera);
+                    state.currentCameraIndex = state.cameras.indexOf(rearCamera);
                     return rearCamera.deviceId;
                 }
                 
-                if (cameras.length > 1) {
-                    currentCameraIndex = cameras.length - 1;
-                    return cameras[cameras.length - 1].deviceId;
-                }
-                
-                if (cameras.length === 1) {
-                    currentCameraIndex = 0;
-                    return cameras[0].deviceId;
-                }
-                
-                return null;
+                return state.cameras[0]?.deviceId || null;
                 
             } catch (error) {
-                console.error("Erro ao encontrar câmera:", error);
+                console.error('Erro ao buscar câmeras:', error);
                 return null;
             }
         }
-
-        async function handleScannerError(error) {
-            if (html5QrCode) {
-                try {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                } catch (e) {
-                    console.log('Erro ao parar scanner:', e);
+        
+        function createCameraConfig(cameraId) {
+            return {
+                ...scannerConfig,
+                videoConstraints: {
+                    deviceId: { exact: cameraId },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    frameRate: { ideal: 30 }
                 }
-            }
-            
-            isScanning = false;
-            html5QrCode = null;
-            currentCameraId = null;
-            
-            readerElement.style.display = 'none';
-            startBtn.style.display = 'inline-block';
-            cameraInfo.style.display = 'none';
-            stopBtn.disabled = true;
-            switchCameraBtn.disabled = true;
-            
-            if (error.message && error.message.includes('permission')) {
-                updateStatus('❌ Permissão da câmera negada.', 'error');
-            } else if (error.message && error.message.includes('NotFoundError')) {
-                updateStatus('❌ Nenhuma câmera encontrada.', 'error');
-            } else {
-                updateStatus('❌ Erro ao iniciar scanner.', 'error');
-            }
+            };
         }
-
-        function onScanError(error) {
-            if (!error || typeof error !== 'string' || !error.includes("No MultiFormat Readers")) {
-                console.log('Erro de scan:', error);
-            }
+        
+        function createEnvironmentConfig() {
+            return {
+                ...scannerConfig,
+                videoConstraints: {
+                    facingMode: { exact: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
         }
-
-        function onScanSuccess(decodedText, decodedResult) {
-            const now = Date.now();
+        
+        function onScanSuccess(decodedText) {
             const code = decodedText.trim();
+            const now = Date.now();
             
-            if (!isValidBarcode(code)) return;
-            if (code === lastScanned && (now - lastScanTime) < 2000) return;
+            if (!isValidCode(code)) return;
             
-            lastScanned = code;
-            lastScanTime = now;
+            // Debounce para evitar leituras duplicadas
+            if (code === state.lastScanned && (now - state.lastScanTime) < 1000) return;
+            
+            state.lastScanned = code;
+            state.lastScanTime = now;
             
             updateStatus(`📷 Código detectado: ${code}`, 'success');
+            state.currentScannedCode = code;
             
-            // PARAR O SCANNER IMEDIATAMENTE
-            if (html5QrCode) {
-                html5QrCode.pause();
+            // Pausar scanner
+            if (state.scanner) {
+                state.scanner.pause();
                 setTimeout(() => {
-                    if (html5QrCode && isScanning) {
-                        html5QrCode.stop().then(() => {
-                            html5QrCode.clear();
-                            isScanning = false;
-                            
-                            // Fechar a visualização da câmera
-                            readerElement.style.display = 'none';
-                            startBtn.style.display = 'inline-block';
-                            cameraInfo.style.display = 'none';
-                            stopBtn.disabled = true;
-                            switchCameraBtn.disabled = true;
-                            
-                            // Mostrar modal de confirmação
-                            showConfirmationModal(code);
-                        });
+                    stopScanner();
+                    // Perguntar se quer adicionar ao lote ou salvar individual
+                    if (state.batchItems.length > 0) {
+                        showBatchModal(code);
+                    } else {
+                        showChoiceModal(code);
                     }
                 }, 100);
             }
         }
-
-        function isValidBarcode(code) {
-            if (!/^\d+$/.test(code) && !isValidQRCode(code)) return false;
-            if (/^\d+$/.test(code) && (code.length < 8 || code.length > 13)) return false;
-            return true;
+        
+        function showChoiceModal(code) {
+            const choice = confirm(`Código: ${code}\n\nComo deseja salvar?\n\n"OK" = Adicionar ao Lote\n"Cancelar" = Salvar Individual`);
+            
+            if (choice) {
+                showBatchModal(code);
+            } else {
+                showSingleModal(code);
+            }
         }
-
-        function isValidQRCode(code) {
-            return code && code.trim().length > 0;
+        
+        function onScanError(error) {
+            if (typeof error === 'string' && error.includes("No MultiFormat Readers")) {
+                return;
+            }
+            console.log('Erro de scan:', error);
         }
-
+        
+        function handleScannerError(error) {
+            if (state.scanner) {
+                state.scanner.stop().catch(() => {});
+                state.scanner.clear();
+            }
+            
+            state.isScanning = false;
+            state.scanner = null;
+            
+            resetScannerUI();
+            
+            if (error.message?.includes('permission')) {
+                updateStatus('❌ Permissão da câmera negada', 'error');
+            } else if (error.message?.includes('NotFoundError')) {
+                updateStatus('❌ Nenhuma câmera encontrada', 'error');
+            } else {
+                updateStatus('❌ Erro ao iniciar scanner', 'error');
+            }
+        }
+        
         async function stopScanner() {
-            if (html5QrCode && isScanning) {
-                try {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                } catch (error) {
-                    console.log('Erro ao parar scanner:', error);
-                }
-                
-                isScanning = false;
-                html5QrCode = null;
-                currentCameraId = null;
-                
-                readerElement.style.display = 'none';
-                startBtn.style.display = 'inline-block';
-                cameraInfo.style.display = 'none';
-                stopBtn.disabled = true;
-                switchCameraBtn.disabled = true;
-                
-                updateStatus('⏹ Scanner parado.', 'info');
-            }
-        }
-
-        async function switchCamera() {
-            if (cameras.length > 1) {
-                // Parar scanner atual
-                if (html5QrCode && isScanning) {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                    
-                    // Alternar para próxima câmera
-                    currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-                    currentCameraId = cameras[currentCameraIndex].deviceId;
-                    
-                    // Reiniciar scanner com nova câmera
-                    await initScannerWithCamera(currentCameraId);
-                }
-            }
-        }
-
-        async function initScannerWithCamera(cameraId) {
+            if (!state.scanner || !state.isScanning) return;
+            
             try {
-                const config = {
-                    fps: 30,
-                    qrbox: { width: 300, height: 200 },
-                    aspectRatio: 4/3,
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.QR_CODE
-                    ]
-                };
-                
-                html5QrCode = new Html5Qrcode("reader");
-                
-                const cameraConfig = {
-                    ...config,
-                    videoConstraints: {
-                        deviceId: { exact: cameraId },
-                        width: { min: 1280, ideal: 1920 },
-                        height: { min: 720, ideal: 1080 }
-                    }
-                };
-                
-                await html5QrCode.start(
-                    cameraId,
-                    cameraConfig,
-                    onScanSuccess,
-                    onScanError
-                );
-                
-                isScanning = true;
-                updateStatus(`🔄 Alterado para ${cameras[currentCameraIndex].label || 'câmera'}`, 'success');
-                
+                await state.scanner.stop();
+                state.scanner.clear();
             } catch (error) {
-                console.error('Erro ao trocar câmera:', error);
-                updateStatus('❌ Erro ao trocar câmera', 'error');
+                console.log('Erro ao parar scanner:', error);
+            }
+            
+            state.isScanning = false;
+            state.scanner = null;
+            resetScannerUI();
+            updateStatus('⏹ Scanner parado', 'info');
+        }
+        
+        function resetScannerUI() {
+            elements.reader.style.display = 'none';
+            elements.startBtn.style.display = 'inline-flex';
+            elements.cameraInfo.style.display = 'none';
+            elements.stopBtn.disabled = true;
+            elements.switchCameraBtn.disabled = true;
+        }
+        
+        async function switchCamera() {
+            if (state.cameras.length < 2 || !state.isScanning) return;
+            
+            await stopScanner();
+            state.currentCameraIndex = (state.currentCameraIndex + 1) % state.cameras.length;
+            setTimeout(startScanner, 300);
+        }
+        
+        // ==================== BATCH FUNCTIONS ====================
+        function showBatchModal(code) {
+            elements.batchCode.textContent = code;
+            elements.batchQuantity.value = 1;
+            elements.batchModal.style.display = 'flex';
+            elements.batchQuantity.focus();
+            
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+        
+        function showSingleModal(code) {
+            closeModal('batch');
+            elements.singleCode.textContent = code;
+            elements.singleQuantity.value = 1;
+            elements.singleModal.style.display = 'flex';
+            elements.singleQuantity.focus();
+            
+            if (navigator.vibrate) navigator.vibrate(100);
+        }
+        
+        function closeModal(modalType) {
+            if (modalType === 'single') {
+                elements.singleModal.style.display = 'none';
+            } else if (modalType === 'batch') {
+                elements.batchModal.style.display = 'none';
+            }
+            setTimeout(startScanner, 300);
+        }
+        
+        function addToBatch() {
+            const quantity = parseInt(elements.batchQuantity.value) || 1;
+            const code = elements.batchCode.textContent;
+            
+            // Verificar se já existe no lote
+            const existingIndex = state.batchItems.findIndex(item => item.ean === code);
+            
+            if (existingIndex > -1) {
+                // Atualizar quantidade
+                state.batchItems[existingIndex].quantidade += quantity;
+            } else {
+                // Adicionar novo item
+                state.batchItems.push({
+                    ean: code,
+                    quantidade: quantity,
+                    timestamp: Date.now()
+                });
+            }
+            
+            updateBatchUI();
+            updateStatus(`✅ Adicionado ao lote: ${code} (x${quantity})`, 'success');
+            
+            // Fechar modal e continuar escaneando
+            closeModal('batch');
+            setTimeout(() => {
+                elements.sendBatchBtn.focus();
+            }, 100);
+        }
+        
+        function saveSingleItem() {
+            const quantity = parseInt(elements.singleQuantity.value) || 1;
+            const code = elements.singleCode.textContent;
+            
+            // Enviar item individual
+            sendItemsToSheets([{
+                ean: code,
+                quantidade: quantity,
+                timestamp: Date.now()
+            }], 'single');
+            
+            closeModal('single');
+        }
+        
+        function updateBatchUI() {
+            // Atualizar contador
+            elements.batchCounter.textContent = state.batchItems.length;
+            
+            // Atualizar lista de itens
+            elements.batchItems.innerHTML = '';
+            
+            state.batchItems.forEach((item, index) => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'batch-item';
+                itemElement.innerHTML = `
+                    <div>
+                        <span class="item-code">${item.ean}</span>
+                        <span class="item-quantity">x${item.quantidade}</span>
+                    </div>
+                    <button class="remove-item" onclick="removeFromBatch(${index})" title="Remover">
+                        ×
+                    </button>
+                `;
+                elements.batchItems.appendChild(itemElement);
+            });
+            
+            // Atualizar estado dos botões
+            elements.sendBatchBtn.disabled = state.batchItems.length === 0;
+            elements.saveSingleBtn.disabled = !state.currentScannedCode;
+            
+            if (state.batchItems.length === 0) {
+                elements.batchItems.innerHTML = `
+                    <div style="padding: 30px; text-align: center; color: var(--secondary); font-size: 14px;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">📦</div>
+                        Nenhum item no lote<br>
+                        <small>Escaneie códigos para adicionar</small>
+                    </div>
+                `;
             }
         }
-
-        // ========== MODAL DE CONFIRMAÇÃO ==========
-        function showConfirmationModal(code) {
-            scannedCodeElement.textContent = code;
-            quantityInput.value = 1;
-            quantityInput.focus();
+        
+        window.removeFromBatch = function(index) {
+            state.batchItems.splice(index, 1);
+            updateBatchUI();
+            updateStatus('Item removido do lote', 'info');
+        };
+        
+        function clearBatch() {
+            if (state.batchItems.length === 0) return;
             
-            confirmModal.style.display = 'flex';
-            
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
+            if (confirm(`Tem certeza que deseja limpar o lote?\n${state.batchItems.length} item(s) serão removidos.`)) {
+                state.batchItems = [];
+                updateBatchUI();
+                updateStatus('Lote limpo', 'info');
             }
         }
-
-        // ========== FUNÇÕES DE SALVAMENTO ==========
-        async function saveToGoogleSheets() {
-            const quantidade = quantityInput.value.trim();
-            const code = scannedCodeElement.textContent;
+        
+        async function sendBatch() {
+            if (state.batchItems.length === 0) return;
             
-            if (!quantidade || isNaN(quantidade) || quantidade < 1) {
-                updateStatus('❌ Digite uma quantidade válida!', 'error');
-                quantityInput.focus();
-                quantityInput.select();
+            const totalItems = state.batchItems.reduce((sum, item) => sum + item.quantidade, 0);
+            
+            if (!confirm(`Enviar ${state.batchItems.length} item(s) (total: ${totalItems} unidades) para o Google Sheets?`)) {
                 return;
             }
             
-            loading.style.display = 'block';
-            saveBtn.disabled = true;
-            cancelBtn.disabled = true;
+            elements.batchLoading.style.display = 'block';
+            elements.loadingText.textContent = `Enviando ${state.batchItems.length} itens...`;
+            elements.sendBatchBtn.disabled = true;
+            elements.clearBatchBtn.disabled = true;
             
             try {
-                const data = {
-                    ean: code,
-                    quantidade: quantidade,
-                    timestamp: new Date().getTime()
-                };
+                await sendItemsToSheets(state.batchItems, 'batch');
                 
-                await fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
+                // Adicionar ao histórico
+                addToHistory({
+                    type: 'batch',
+                    count: state.batchItems.length,
+                    total: totalItems,
+                    timestamp: Date.now()
                 });
                 
-                updateStatus(`✅ Salvo! EAN: ${code.substring(0, 20)}${code.length > 20 ? '...' : ''}, Qtd: ${quantidade}`, 'success');
-                
-                addToHistory(code, quantidade);
-                
-                setTimeout(() => {
-                    confirmModal.style.display = 'none';
-                    loading.style.display = 'none';
-                    saveBtn.disabled = false;
-                    cancelBtn.disabled = false;
-                    
-                    setTimeout(() => {
-                        if (html5QrCode) {
-                            initScanner();
-                        }
-                    }, 1000);
-                }, 1500);
+                // Limpar lote após envio bem-sucedido
+                state.batchItems = [];
+                updateBatchUI();
                 
             } catch (error) {
-                console.error('Erro ao salvar:', error);
-                updateStatus('❌ Erro ao salvar. Verifique conexão.', 'error');
-                loading.style.display = 'none';
-                saveBtn.disabled = false;
-                cancelBtn.disabled = false;
+                console.error('Erro ao enviar lote:', error);
+                updateStatus('❌ Erro ao enviar lote', 'error');
+            } finally {
+                elements.batchLoading.style.display = 'none';
+                elements.sendBatchBtn.disabled = false;
+                elements.clearBatchBtn.disabled = false;
             }
         }
-
-        // ========== HISTÓRICO ==========
-        function addToHistory(ean, quantidade) {
+        
+        // ==================== GOOGLE SHEETS FUNCTIONS ====================
+        async function sendItemsToSheets(items, mode) {
+            try {
+                // Enviar em lote - MUITO MAIS RÁPIDO
+                const batchData = {
+                    operation: 'batch_save',
+                    items: items,
+                    mode: mode,
+                    totalItems: items.length,
+                    timestamp: Date.now()
+                };
+                
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(batchData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const message = mode === 'batch' 
+                        ? `✅ Lote enviado! ${items.length} itens salvos`
+                        : `✅ Item salvo! ${items[0].ean} x${items[0].quantidade}`;
+                    
+                    updateStatus(message, 'success');
+                    
+                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                } else {
+                    throw new Error(result.error || 'Erro desconhecido');
+                }
+                
+            } catch (error) {
+                console.error('Erro ao enviar para Google Sheets:', error);
+                updateStatus(`❌ Erro: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+        
+        // ==================== HISTÓRICO ====================
+        function addToHistory(record) {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit'
-            });
+            const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            historyItem.innerHTML = `
-                <span>${timeString}</span> - EAN: ${ean} | Qtd: ${quantidade}
-            `;
+            const item = document.createElement('div');
+            item.className = 'history-item';
             
-            historyList.prepend(historyItem);
+            if (record.type === 'batch') {
+                item.innerHTML = `
+                    <div>
+                        <strong>📦 Lote</strong>
+                        <div class="history-time">${time}</div>
+                    </div>
+                    <div>
+                        ${record.count} itens<br>
+                        <small>Total: ${record.total} un</small>
+                    </div>
+                `;
+            } else {
+                item.innerHTML = `
+                    <div>
+                        <strong>📄 Individual</strong>
+                        <div class="history-time">${time}</div>
+                    </div>
+                    <div>
+                        ${record.ean}<br>
+                        <small>${record.quantidade} un</small>
+                    </div>
+                `;
+            }
             
-            const items = historyList.querySelectorAll('.history-item');
+            elements.historyList.prepend(item);
+            
+            // Manter apenas os últimos 10 itens
+            const items = elements.historyList.querySelectorAll('.history-item');
             if (items.length > 10) {
                 items[items.length - 1].remove();
             }
+            
+            // Salvar no localStorage
+            saveHistoryToLocalStorage();
         }
-
-        // ========== FUNÇÕES AUXILIARES ==========
+        
+        function saveHistoryToLocalStorage() {
+            // Implementação simplificada - em produção, use IndexedDB
+            try {
+                const history = Array.from(elements.historyList.children).slice(0, 10).map(item => ({
+                    html: item.innerHTML,
+                    timestamp: Date.now()
+                }));
+                localStorage.setItem('scannerHistory', JSON.stringify(history));
+            } catch (e) {
+                console.log('Não foi possível salvar no localStorage');
+            }
+        }
+        
+        function loadHistoryFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('scannerHistory');
+                if (saved) {
+                    const history = JSON.parse(saved);
+                    history.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'history-item';
+                        div.innerHTML = item.html;
+                        elements.historyList.appendChild(div);
+                    });
+                }
+            } catch (e) {
+                console.log('Não foi possível carregar do localStorage');
+            }
+        }
+        
+        // ==================== UTILITIES ====================
+        function isValidCode(code) {
+            if (!code || code.trim().length === 0) return false;
+            if (/^\d+$/.test(code)) {
+                return code.length >= 8 && code.length <= 13;
+            }
+            return true;
+        }
+        
         function updateStatus(message, type = 'info') {
-            statusMessage.textContent = message;
-            statusMessage.className = `status ${type}`;
-            statusMessage.style.display = 'block';
+            elements.status.textContent = message;
+            elements.status.className = `status ${type}`;
+            elements.status.style.display = 'flex';
             
             if (type !== 'error') {
                 setTimeout(() => {
-                    statusMessage.style.display = 'none';
-                }, 5000);
+                    if (elements.status.textContent === message) {
+                        elements.status.style.display = 'none';
+                    }
+                }, 4000);
             }
         }
-
-        // ========== EVENT LISTENERS ==========
-        startBtn.addEventListener('click', initScanner);
-        stopBtn.addEventListener('click', stopScanner);
-        switchCameraBtn.addEventListener('click', switchCamera);
-        cancelBtn.addEventListener('click', () => {
-            confirmModal.style.display = 'none';
-            setTimeout(() => {
-                if (html5QrCode) {
-                    initScanner();
-                }
-            }, 500);
-        });
-        saveBtn.addEventListener('click', saveToGoogleSheets);
         
-        quantityInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                saveBtn.click();
-            }
-        });
-        
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && confirmModal.style.display === 'flex') {
-                cancelBtn.click();
-            }
-        });
-
-        // ========== INICIALIZAÇÃO ==========
-        document.addEventListener('DOMContentLoaded', () => {
-            // Verificar permissão de câmera
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(() => {
-                        updateStatus('✅ Câmera autorizada. Clique em "Iniciar Scanner".', 'success');
-                    })
-                    .catch(err => {
-                        updateStatus('⚠️ Permissão de câmera necessária', 'warning');
-                    });
+        function checkCameraPermission() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                updateStatus('❌ Seu navegador não suporta câmera', 'error');
+                return;
             }
             
-            // Adicionar alguns itens de exemplo no histórico
-            const sampleItems = [
-                { time: '10:30:45', ean: '7891234567890', qtd: '5' },
-                { time: '10:25:12', ean: '7896541239874', qtd: '2' },
-                { time: '10:20:33', ean: '7893216549871', qtd: '10' }
-            ];
-            
-            sampleItems.forEach(item => {
-                const historyItem = document.createElement('div');
-                historyItem.className = 'history-item';
-                historyItem.innerHTML = `
-                    <span>${item.time}</span> - EAN: ${item.ean} | Qtd: ${item.qtd}
-                `;
-                historyList.appendChild(historyItem);
-            });
-        });
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(() => {
+                    updateStatus('✅ Câmera autorizada. Clique em "Iniciar Scanner"', 'success');
+                })
+                .catch(err => {
+                    updateStatus('⚠️ Permissão de câmera necessária', 'warning');
+                });
+        }
+        
+        // ==================== INICIALIZAÇÃO ====================
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
