@@ -14,7 +14,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -27,20 +27,20 @@
             max-width: 500px;
             background: white;
             border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow: hidden;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
         }
         
         .header {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
         .header h1 {
             color: #333;
             font-size: 24px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
         
         .header p {
@@ -57,6 +57,7 @@
             overflow: hidden;
             position: relative;
             display: none;
+            border: 3px solid #667eea;
         }
         
         .scanner-frame {
@@ -161,6 +162,12 @@
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
         }
         
         /* Modal de Confirmação */
@@ -288,7 +295,7 @@
         /* Responsividade */
         @media (max-width: 768px) {
             .container {
-                padding: 15px;
+                padding: 20px;
             }
             
             #reader {
@@ -306,6 +313,10 @@
         }
         
         @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
             #reader {
                 height: 200px;
             }
@@ -329,7 +340,7 @@
     <div class="container">
         <div class="header">
             <h1>📱 Scanner Rápido</h1>
-            <p>Escaneie códigos de barras</p>
+            <p>Escaneie códigos de barras EAN/QR Code</p>
         </div>
         
         <div id="reader">
@@ -363,10 +374,6 @@
                 <button id="saveBtn" class="btn btn-success">Salvar</button>
             </div>
             
-            <div class="batch-info">
-                📦 Os dados serão salvos em lote no Google Sheets
-            </div>
-            
             <div class="loading" id="loading">
                 <div class="spinner"></div>
                 <p style="margin-top: 8px; font-size: 14px; color: #666;">Salvando...</p>
@@ -375,16 +382,15 @@
     </div>
 
     <script>
-        // Configurações
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzcQeHqiGdxiqdjxVpdu441F3_LZv9JganH9C5CEc6cmqGhTLo8dff9NAag55cN_HtFWA/exec';
+        // CONFIGURAÇÃO - SUBSTITUA ESTA URL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec';
         
         // Estado da aplicação
         let html5QrCode = null;
         let isScanning = false;
         let lastScanned = '';
         let lastScanTime = 0;
-        let pendingItems = []; // Itens aguardando envio em lote
-        let batchTimer = null;
+        let pendingItems = [];
         
         // Elementos DOM
         const elements = {
@@ -403,7 +409,7 @@
         // Inicialização
         function init() {
             setupEventListeners();
-            checkCameraPermission();
+            testApiConnection();
         }
         
         function setupEventListeners() {
@@ -423,21 +429,19 @@
             });
         }
         
-        // Verificar permissão da câmera
-        function checkCameraPermission() {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                showStatus('Seu navegador não suporta câmera', 'error');
-                elements.startBtn.disabled = true;
-                return;
+        // Testar conexão com API
+        async function testApiConnection() {
+            try {
+                const response = await fetch(`${GOOGLE_SCRIPT_URL}?operation=ping`);
+                if (response.ok) {
+                    showStatus('✅ API conectada', 'success');
+                } else {
+                    showStatus('⚠️ API não responde', 'warning');
+                }
+            } catch (error) {
+                showStatus('❌ Erro na conexão com API', 'error');
+                console.error('Erro na conexão:', error);
             }
-            
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(() => {
-                    showStatus('Pronto para escanear', 'success');
-                })
-                .catch(err => {
-                    showStatus('Permissão de câmera necessária', 'error');
-                });
         }
         
         // Iniciar scanner
@@ -484,7 +488,7 @@
                 );
                 
                 isScanning = true;
-                showStatus('Scanner ativo - Aponte para um código', 'success');
+                showStatus('✅ Scanner ativo - Aponte para um código', 'success');
                 
             } catch (error) {
                 console.error('Erro ao iniciar scanner:', error);
@@ -506,7 +510,7 @@
             lastScanned = code;
             lastScanTime = now;
             
-            // Parar scanner
+            // Parar scanner e mostrar modal
             if (html5QrCode) {
                 html5QrCode.pause();
                 setTimeout(() => {
@@ -560,11 +564,11 @@
             elements.stopBtn.style.display = 'none';
             
             if (error.message?.includes('permission')) {
-                showStatus('Permissão da câmera negada', 'error');
+                showStatus('❌ Permissão da câmera negada', 'error');
             } else if (error.message?.includes('NotFoundError')) {
-                showStatus('Nenhuma câmera encontrada', 'error');
+                showStatus('❌ Nenhuma câmera encontrada', 'error');
             } else {
-                showStatus('Erro ao iniciar scanner', 'error');
+                showStatus('❌ Erro ao iniciar scanner', 'error');
             }
         }
         
@@ -600,53 +604,54 @@
             const quantity = elements.quantity.value.trim();
             
             if (!quantity || isNaN(quantity) || quantity < 1) {
-                alert('Digite uma quantidade válida!');
+                showStatus('❌ Digite uma quantidade válida!', 'error');
                 elements.quantity.focus();
                 elements.quantity.select();
                 return;
             }
             
-            // Adicionar ao array de itens pendentes
-            pendingItems.push({
+            // Preparar item
+            const item = {
                 ean: code,
                 quantidade: parseInt(quantity),
                 timestamp: Date.now()
-            });
+            };
+            
+            // Adicionar ao array de itens pendentes
+            pendingItems.push(item);
             
             // Mostrar loading
             elements.loading.style.display = 'block';
             elements.saveBtn.disabled = true;
             elements.cancelBtn.disabled = true;
             
-            // Processar envio em lote
-            await processBatch();
+            // Enviar para API
+            const success = await sendToApi(item);
             
-            // Fechar modal e continuar escaneando
-            elements.confirmModal.style.display = 'none';
+            // Resetar interface
             elements.loading.style.display = 'none';
             elements.saveBtn.disabled = false;
             elements.cancelBtn.disabled = false;
             
-            setTimeout(startScanner, 300);
+            if (success) {
+                elements.confirmModal.style.display = 'none';
+                setTimeout(startScanner, 300);
+            }
         }
         
-        // Processar envio em lote
-        async function processBatch() {
+        // Enviar para API
+        async function sendToApi(item) {
             try {
-                if (pendingItems.length === 0) return;
-                
-                // Enviar lote para Google Sheets
-                const batchData = {
-                    operation: 'batch_save',
-                    items: pendingItems,
-                    mode: 'auto_batch',
-                    timestamp: Date.now()
+                // Preparar dados para envio em lote
+                const data = {
+                    operation: 'save_batch',
+                    items: [item] // Mesmo item único vai como array para usar batch
                 };
                 
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(batchData)
+                    body: JSON.stringify(data)
                 });
                 
                 if (!response.ok) {
@@ -656,21 +661,17 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showStatus(`✅ ${pendingItems.length} item(s) salvos!`, 'success');
-                    pendingItems = []; // Limpar array
-                    
-                    // Vibração de confirmação
+                    showStatus('✅ Item salvo com sucesso!', 'success');
                     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    return true;
                 } else {
                     throw new Error(result.error || 'Erro desconhecido');
                 }
                 
             } catch (error) {
-                console.error('Erro ao processar lote:', error);
-                showStatus('❌ Erro ao salvar. Tentando novamente...', 'error');
-                
-                // Tentar novamente em 3 segundos
-                setTimeout(processBatch, 3000);
+                console.error('Erro ao enviar:', error);
+                showStatus('❌ Erro ao salvar. Tente novamente.', 'error');
+                return false;
             }
         }
         
@@ -681,7 +682,9 @@
             
             // Auto-esconder após alguns segundos
             setTimeout(() => {
-                elements.statusMessage.classList.remove('show');
+                if (elements.statusMessage.textContent === message) {
+                    elements.statusMessage.classList.remove('show');
+                }
             }, 3000);
         }
         
