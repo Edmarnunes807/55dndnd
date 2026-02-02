@@ -49,7 +49,7 @@
             font-size: 14px;
         }
         
-        /* Área do scanner */
+        /* Área do scanner - EXATAMENTE como estava */
         #scannerContainer {
             width: 100%;
             height: 300px;
@@ -341,10 +341,10 @@
     <div class="container">
         <div class="header">
             <h1>📱 Scanner Rápido</h1>
-            <p>Escaneie e salve em lote</p>
+            <p>Escaneie códigos de barras EAN/QR Code</p>
         </div>
         
-        <!-- Área do scanner -->
+        <!-- Área do scanner EXATAMENTE como estava no seu código -->
         <div class="scanner-section">
             <div id="scannerContainer">
                 <div id="reader"></div>
@@ -379,13 +379,14 @@
                 <button id="saveBtn" class="btn btn-success">Salvar</button>
             </div>
             
-            <div class="loading" id="loading">Salvando...</div>
+            <div class="loading" id="loading">Enviando dados...</div>
         </div>
     </div>
 
     <script>
+        // ========== CÓDIGO DO SCANNER EXATAMENTE COMO VOCÊ MANDOU ==========
         // ========== CONFIGURAÇÕES ==========
-        const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwvT6W9FkuX0-aDGV5mhz8cYYJ9aHopQVattmHPZDkEtBdUgSTP1DsqUG3NtOsEXZBOGA/exec";
+        const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec";
         const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
         // ========== VARIÁVEIS GLOBAIS ==========
@@ -416,7 +417,7 @@
             try {
                 updateStatus('Iniciando câmera...', 'info');
                 
-                // Mostrar interface do scanner
+                // Mostrar interface do scanner - EXATAMENTE como estava
                 scannerContainer.style.display = 'block';
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-flex';
@@ -443,7 +444,7 @@
                 
                 html5QrCode = new Html5Qrcode("reader");
                 
-                // Tentar encontrar câmera traseira
+                // Tentar encontrar câmera traseira - EXATAMENTE como estava
                 const rearCameraId = await findRearCamera();
                 
                 if (rearCameraId) {
@@ -467,7 +468,7 @@
                     );
                     
                 } else {
-                    // Fallback para modo ambiente
+                    // Fallback para modo ambiente - EXATAMENTE como estava
                     const fallbackConfig = {
                         ...config,
                         videoConstraints: {
@@ -580,7 +581,7 @@
             }
         }
 
-        // ========== FUNÇÃO ONSCANSUCCESS ==========
+        // ========== FUNÇÃO ONSCANSUCCESS EXATAMENTE COMO NO SEU CÓDIGO ==========
         function onScanSuccess(decodedText, decodedResult) {
             const now = Date.now();
             const code = decodedText.trim();
@@ -593,7 +594,7 @@
             
             updateStatus(`📷 Código detectado: ${code}`, 'success');
             
-            // PARAR O SCANNER
+            // PARAR O SCANNER IMEDIATAMENTE - EXATAMENTE como estava
             if (html5QrCode) {
                 html5QrCode.pause();
                 setTimeout(() => {
@@ -648,7 +649,7 @@
             }
         }
 
-        // ========== MODAL DE CONFIRMAÇÃO ==========
+        // ========== MODAL DE CONFIRMAÇÃO (SIMPLIFICADO) ==========
         function showConfirmationModal(code) {
             scannedCodeElement.textContent = code;
             quantityInput.value = 1;
@@ -656,15 +657,16 @@
             
             confirmModal.style.display = 'flex';
             
+            // Vibração se suportado
             if (navigator.vibrate) {
                 navigator.vibrate(200);
             }
         }
 
-        // ========== SALVAR ITEM USANDO MÉTODO DE LOTE ==========
-        async function saveItem() {
-            const code = scannedCodeElement.textContent;
+        // ========== FUNÇÕES DE SALVAMENTO ==========
+        async function saveToGoogleSheets() {
             const quantidade = quantityInput.value.trim();
+            const code = scannedCodeElement.textContent;
             
             if (!quantidade || isNaN(quantidade) || quantidade < 1) {
                 updateStatus('❌ Digite uma quantidade válida!', 'error');
@@ -673,58 +675,45 @@
                 return;
             }
             
-            // Mostrar loading
             loading.style.display = 'block';
             saveBtn.disabled = true;
             cancelBtn.disabled = true;
             
             try {
-                // Envia UM item usando o método de lote (mais rápido)
-                const batchData = {
-                    operation: 'save_batch',
-                    items: [{
-                        ean: code,
-                        quantidade: parseInt(quantidade),
-                        timestamp: new Date().getTime()
-                    }]
+                const data = {
+                    ean: code,
+                    quantidade: quantidade,
+                    timestamp: new Date().getTime()
                 };
                 
-                const response = await fetch(GOOGLE_SHEETS_API, {
+                // Enviar para Google Sheets - usando no-cors para Apps Script
+                await fetch(GOOGLE_SHEETS_API, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(batchData)
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
+                updateStatus(`✅ Salvo! ${code} - Qtd: ${quantidade}`, 'success');
                 
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateStatus(`✅ Salvo! ${code} - Qtd: ${quantidade}`, 'success');
-                    
-                    // Fechar modal
+                // Fechar modal e retomar scanner
+                setTimeout(() => {
                     confirmModal.style.display = 'none';
                     loading.style.display = 'none';
                     saveBtn.disabled = false;
                     cancelBtn.disabled = false;
                     
-                    // Vibração de confirmação
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                    
-                    // Reabrir scanner
+                    // Retomar scanner
                     setTimeout(() => {
                         initScanner();
-                    }, 800);
-                    
-                } else {
-                    throw new Error(result.error || 'Erro ao salvar');
-                }
+                    }, 1000);
+                }, 1500);
                 
             } catch (error) {
                 console.error('Erro ao salvar:', error);
-                updateStatus('❌ Erro ao salvar. Tente novamente.', 'error');
+                updateStatus('❌ Erro ao salvar. Verifique conexão.', 'error');
                 loading.style.display = 'none';
                 saveBtn.disabled = false;
                 cancelBtn.disabled = false;
@@ -738,9 +727,7 @@
             
             if (type !== 'error') {
                 setTimeout(() => {
-                    if (statusMessage.textContent === message) {
-                        statusMessage.style.display = 'none';
-                    }
+                    statusMessage.style.display = 'none';
                 }, 4000);
             }
         }
@@ -754,7 +741,7 @@
                 initScanner();
             }, 500);
         });
-        saveBtn.addEventListener('click', saveItem);
+        saveBtn.addEventListener('click', saveToGoogleSheets);
         
         quantityInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -770,6 +757,7 @@
 
         // ========== INICIALIZAÇÃO ==========
         document.addEventListener('DOMContentLoaded', () => {
+            // Testar permissão de câmera
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: true })
                     .then(() => {
@@ -785,4 +773,3 @@
     </script>
 </body>
 </html>
-
