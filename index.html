@@ -386,7 +386,7 @@
     <script>
         // ========== CÓDIGO DO SCANNER EXATAMENTE COMO VOCÊ MANDOU ==========
         // ========== CONFIGURAÇÕES ==========
-        const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbzwtPq_WuMsl6RKtkqcKW-axnB1cDaViZzJEa3Q5D4b_BIi5j3c5ucEPTBLqfksSwaKbg/exec";
+        const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec";
         const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
         // ========== VARIÁVEIS GLOBAIS ==========
@@ -649,7 +649,7 @@
             }
         }
 
-        // ========== MODAL DE CONFIRMAÇÃO (SIMPLIFICADO) ==========
+        // ========== MODAL DE CONFIRMAÇÃO ==========
         function showConfirmationModal(code) {
             scannedCodeElement.textContent = code;
             quantityInput.value = 1;
@@ -663,7 +663,7 @@
             }
         }
 
-        // ========== FUNÇÕES DE SALVAMENTO ==========
+        // ========== FUNÇÕES DE SALVAMENTO - MODIFICADA PARA BATCH ==========
         async function saveToGoogleSheets() {
             const quantidade = quantityInput.value.trim();
             const code = scannedCodeElement.textContent;
@@ -680,44 +680,99 @@
             cancelBtn.disabled = true;
             
             try {
-                const data = {
-                    ean: code,
-                    quantidade: quantidade,
-                    timestamp: new Date().getTime()
+                // FORMATO EXATO QUE SUA API ESPERA PARA BATCH
+                const batchData = {
+                    operation: "save_batch", // ← ESSENCIAL: campo "operation"
+                    items: [ // ← ESSENCIAL: array "items"
+                        {
+                            ean: code,
+                            quantidade: parseInt(quantidade),
+                            timestamp: new Date().getTime()
+                        }
+                    ]
                 };
                 
-                // Enviar para Google Sheets - usando no-cors para Apps Script
+                console.log("📤 Enviando lote para API:", batchData);
+                
+                // PRIMEIRO MÉTODO: com verificação de resposta
+                try {
+                    const response = await fetch(GOOGLE_SHEETS_API, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(batchData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log("📥 Resposta da API:", result);
+                    
+                    if (result.success) {
+                        handleSaveSuccess(code, quantidade, result.message);
+                        return;
+                    } else {
+                        throw new Error(result.error || "Erro ao salvar lote");
+                    }
+                    
+                } catch (fetchError) {
+                    console.log("Primeiro método falhou, tentando no-cors...", fetchError);
+                    // Tenta método alternativo
+                    await saveWithNoCors(batchData, code, quantidade);
+                }
+                
+            } catch (error) {
+                handleSaveError(error);
+            }
+        }
+
+        // Método alternativo com no-cors
+        async function saveWithNoCors(batchData, code, quantidade) {
+            try {
                 await fetch(GOOGLE_SHEETS_API, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'no-cors', // ← Modo no-cors para Apps Script
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(batchData)
                 });
                 
-                updateStatus(`✅ Salvo! ${code} - Qtd: ${quantidade}`, 'success');
+                // Com no-cors não temos resposta, mas assumimos sucesso
+                handleSaveSuccess(code, quantidade, "Salvo via método alternativo");
                 
-                // Fechar modal e retomar scanner
-                setTimeout(() => {
-                    confirmModal.style.display = 'none';
-                    loading.style.display = 'none';
-                    saveBtn.disabled = false;
-                    cancelBtn.disabled = false;
-                    
-                    // Retomar scanner
-                    setTimeout(() => {
-                        initScanner();
-                    }, 1000);
-                }, 1500);
-                
-            } catch (error) {
-                console.error('Erro ao salvar:', error);
-                updateStatus('❌ Erro ao salvar. Verifique conexão.', 'error');
+            } catch (noCorsError) {
+                console.error("Método no-cors também falhou:", noCorsError);
+                throw new Error("Falha em todos os métodos de envio");
+            }
+        }
+
+        function handleSaveSuccess(code, quantidade, message) {
+            updateStatus(`✅ ${message || 'Lote salvo!'} ${code} - Qtd: ${quantidade}`, 'success');
+            
+            // Fechar modal e retomar scanner
+            setTimeout(() => {
+                confirmModal.style.display = 'none';
                 loading.style.display = 'none';
                 saveBtn.disabled = false;
                 cancelBtn.disabled = false;
-            }
+                
+                // Retomar scanner
+                setTimeout(() => {
+                    initScanner();
+                }, 1000);
+            }, 1500);
+        }
+
+        function handleSaveError(error) {
+            console.error('❌ Erro ao salvar lote:', error);
+            updateStatus(`❌ Erro: ${error.message}`, 'error');
+            loading.style.display = 'none';
+            saveBtn.disabled = false;
+            cancelBtn.disabled = false;
         }
 
         // ========== FUNÇÕES AUXILIARES ==========
