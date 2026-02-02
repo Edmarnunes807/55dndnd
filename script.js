@@ -1,7 +1,8 @@
 // ============================================
 // CONFIGURAÇÕES GLOBAIS
 // ============================================
-const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbztmbLme_-QT7UjyZulntjbeoPD-vIA4Vqvp0chQiR5cZUYkwd-7DwMHlEqqvwB8_OrCw/exec";
+// SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxij4Hzt0TF6WHckpq-UO9P36L94b5UPhleuMAo662s7TWEn14jyGwLNILAxdtU9FGXkA/exec";
 const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
 // ============================================
@@ -46,7 +47,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// FUNÇÕES DO SCANNER (EXATAMENTE COMO ANTES)
+// FUNÇÕES DO SCANNER (MANTIDAS IGUAIS)
 // ============================================
 async function initScanner() {
     if (isScanning) return;
@@ -294,7 +295,7 @@ async function stopScanner() {
 }
 
 // ============================================
-// FUNÇÃO DE AUTOFOCUS
+// FUNÇÃO DE AUTOFOCUS (MANTIDA)
 // ============================================
 async function enableAutofocus() {
     try {
@@ -333,13 +334,13 @@ async function enableAutofocus() {
 }
 
 // ============================================
-// FUNÇÕES DA API - AGORA USANDO GET (COMPATÍVEL)
+// FUNÇÕES DA API - AGORA COMPATÍVEL COM API SIMPLIFICADA
 // ============================================
 async function testApiConnection() {
     try {
         updateStatus('🔗 Testando conexão...', 'info');
         
-        // Usando GET para testar (como sua API funciona)
+        // Usando GET para testar
         const response = await fetch(`${GOOGLE_SHEETS_API}?operation=ping`);
         
         if (!response.ok) {
@@ -380,24 +381,18 @@ async function saveToGoogleSheets() {
     cancelBtn.disabled = true;
     
     try {
-        // USANDO GET PARA SALVAR (COMPATÍVEL COM SUA API)
+        // ENVIAR VIA GET - COMPATÍVEL COM API SIMPLIFICADA
         const params = new URLSearchParams({
             operation: 'save',
             ean: code,
-            quantidade: parseInt(quantidade),
-            timestamp: new Date().getTime(),
-            source: 'scanner_app'
+            quantidade: parseInt(quantidade)
         });
         
         const url = `${GOOGLE_SHEETS_API}?${params.toString()}`;
-        console.log('📤 Enviando via GET:', url);
+        console.log('📤 Enviando:', url);
         
-        // REQUISIÇÃO GET (funciona com sua API)
         const response = await fetch(url);
-        console.log('📥 Status:', response.status);
-        
         const result = await response.json();
-        console.log('📥 Resposta:', result);
         
         if (result.success) {
             updateStatus(`✅ Salvo! ${code} x${quantidade}`, 'success');
@@ -430,7 +425,7 @@ async function saveToGoogleSheets() {
 }
 
 // ============================================
-// FUNÇÕES DA INTERFACE
+// FUNÇÕES DA INTERFACE (MANTIDAS)
 // ============================================
 function showConfirmationModal(code) {
     scannedCodeElement.textContent = code;
@@ -488,7 +483,7 @@ function testCameraPermission() {
 }
 
 // ============================================
-// CONFIGURAÇÃO DE EVENTOS
+// CONFIGURAÇÃO DE EVENTOS (ATUALIZADA)
 // ============================================
 function setupEventListeners() {
     startBtn.addEventListener('click', initScanner);
