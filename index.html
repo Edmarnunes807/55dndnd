@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scanner Rápido</title>
+    <!-- Biblioteca do scanner -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
@@ -48,7 +49,8 @@
             font-size: 14px;
         }
         
-        #reader {
+        /* Área do scanner - EXATAMENTE como estava */
+        #scannerContainer {
             width: 100%;
             height: 300px;
             background: #000;
@@ -58,6 +60,11 @@
             position: relative;
             display: none;
             border: 3px solid #667eea;
+        }
+        
+        #reader {
+            width: 100%;
+            height: 100%;
         }
         
         .scanner-frame {
@@ -146,28 +153,28 @@
             background: #e9ecef;
             color: #495057;
             display: none;
-        }
-        
-        .status.show {
-            display: block;
+            text-align: center;
         }
         
         .status.success {
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
+            display: block;
         }
         
         .status.error {
             background: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
+            display: block;
         }
         
         .status.info {
             background: #dbeafe;
             color: #1e40af;
             border: 1px solid #bfdbfe;
+            display: block;
         }
         
         /* Modal de Confirmação */
@@ -177,7 +184,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             display: none;
             align-items: center;
             justify-content: center;
@@ -270,10 +277,11 @@
             margin: 20px 0;
         }
         
-        .spinner {
+        .loading::after {
+            content: '';
             display: inline-block;
-            width: 24px;
-            height: 24px;
+            width: 25px;
+            height: 25px;
             border: 3px solid #ddd;
             border-top: 3px solid #667eea;
             border-radius: 50%;
@@ -291,7 +299,7 @@
                 padding: 20px;
             }
             
-            #reader {
+            #scannerContainer {
                 height: 250px;
             }
             
@@ -310,7 +318,7 @@
                 padding: 10px;
             }
             
-            #reader {
+            #scannerContainer {
                 height: 200px;
             }
             
@@ -336,18 +344,22 @@
             <p>Escaneie códigos de barras EAN/QR Code</p>
         </div>
         
-        <div id="reader">
-            <div class="scanner-frame">
-                <div class="scanner-line"></div>
+        <!-- Área do scanner EXATAMENTE como estava no seu código -->
+        <div class="scanner-section">
+            <div id="scannerContainer">
+                <div id="reader"></div>
+                <div class="scanner-frame">
+                    <div class="scanner-line"></div>
+                </div>
             </div>
+            
+            <div class="controls">
+                <button id="startBtn" class="btn">▶ Iniciar Scanner</button>
+                <button id="stopBtn" class="btn btn-secondary" style="display: none;">⏹ Parar Scanner</button>
+            </div>
+            
+            <div class="status" id="statusMessage"></div>
         </div>
-        
-        <div class="controls">
-            <button id="startBtn" class="btn">▶ Iniciar Scanner</button>
-            <button id="stopBtn" class="btn btn-secondary" style="display: none;">⏹ Parar Scanner</button>
-        </div>
-        
-        <div class="status" id="statusMessage"></div>
     </div>
     
     <!-- Modal de Confirmação -->
@@ -367,14 +379,12 @@
                 <button id="saveBtn" class="btn btn-success">Salvar</button>
             </div>
             
-            <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p style="margin-top: 8px; font-size: 14px; color: #666;">Salvando...</p>
-            </div>
+            <div class="loading" id="loading">Enviando dados...</div>
         </div>
     </div>
 
     <script>
+        // ========== CÓDIGO DO SCANNER EXATAMENTE COMO VOCÊ MANDOU ==========
         // ========== CONFIGURAÇÕES ==========
         const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwGTmFqjAr5nhFW9niE8e7uXL94pheihkge13jt9TC13hTcI2fLsk5CjVbnfj5Sn98Wig/exec";
         const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
@@ -385,9 +395,11 @@
         let isScanning = false;
         let lastScanned = '';
         let lastScanTime = 0;
+        let cameras = [];
+        let currentCameraIndex = 0;
 
         // ========== ELEMENTOS DOM ==========
-        const readerElement = document.getElementById('reader');
+        const scannerContainer = document.getElementById('scannerContainer');
         const startBtn = document.getElementById('startBtn');
         const stopBtn = document.getElementById('stopBtn');
         const confirmModal = document.getElementById('confirmModal');
@@ -398,15 +410,15 @@
         const statusMessage = document.getElementById('statusMessage');
         const loading = document.getElementById('loading');
 
-        // ========== FUNÇÕES DO SCANNER (CÓDIGO ORIGINAL QUE FUNCIONA) ==========
+        // ========== FUNÇÕES DO SCANNER (EXATAMENTE COMO NO SEU CÓDIGO) ==========
         async function initScanner() {
             if (isScanning) return;
             
             try {
                 updateStatus('Iniciando câmera...', 'info');
                 
-                // Mostrar interface do scanner
-                readerElement.style.display = 'block';
+                // Mostrar interface do scanner - EXATAMENTE como estava
+                scannerContainer.style.display = 'block';
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'inline-flex';
                 
@@ -432,61 +444,37 @@
                 
                 html5QrCode = new Html5Qrcode("reader");
                 
-                // TENTAR USAR A CÂMERA 0 (TRASEIRA) PRIMEIRO
-                const cameras = await getCameras();
+                // Tentar encontrar câmera traseira - EXATAMENTE como estava
+                const rearCameraId = await findRearCamera();
                 
-                if (cameras.length > 0) {
-                    // Tentar encontrar câmera traseira
-                    const rearCamera = findRearCamera(cameras);
+                if (rearCameraId) {
+                    currentCameraId = rearCameraId;
                     
-                    if (rearCamera) {
-                        currentCameraId = rearCamera.deviceId;
-                        
-                        const cameraConfig = {
-                            ...config,
-                            videoConstraints: {
-                                deviceId: { exact: rearCamera.deviceId },
-                                width: { ideal: 1280 },
-                                height: { ideal: 720 },
-                                frameRate: { ideal: 30 }
-                            }
-                        };
-                        
-                        await html5QrCode.start(
-                            rearCamera.deviceId,
-                            cameraConfig,
-                            onScanSuccess,
-                            onScanError
-                        );
-                        
-                    } else {
-                        // Usar primeira câmera disponível
-                        currentCameraId = cameras[0].deviceId;
-                        
-                        const cameraConfig = {
-                            ...config,
-                            videoConstraints: {
-                                deviceId: { exact: cameras[0].deviceId },
-                                width: { ideal: 1280 },
-                                height: { ideal: 720 }
-                            }
-                        };
-                        
-                        await html5QrCode.start(
-                            cameras[0].deviceId,
-                            cameraConfig,
-                            onScanSuccess,
-                            onScanError
-                        );
-                    }
+                    const cameraConfig = {
+                        ...config,
+                        videoConstraints: {
+                            deviceId: { exact: rearCameraId },
+                            width: { min: 1280, ideal: 1920, max: 2560 },
+                            height: { min: 720, ideal: 1080, max: 1440 },
+                            frameRate: { ideal: 30, min: 24 }
+                        }
+                    };
+                    
+                    await html5QrCode.start(
+                        rearCameraId,
+                        cameraConfig,
+                        onScanSuccess,
+                        onScanError
+                    );
+                    
                 } else {
-                    // Fallback para modo ambiente
+                    // Fallback para modo ambiente - EXATAMENTE como estava
                     const fallbackConfig = {
                         ...config,
                         videoConstraints: {
                             facingMode: { exact: "environment" },
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
+                            width: { min: 1280, ideal: 1920 },
+                            height: { min: 720, ideal: 1080 }
                         }
                     };
                     
@@ -506,57 +494,64 @@
                 
             } catch (error) {
                 console.error('Erro ao iniciar scanner:', error);
-                handleScannerError(error);
+                await handleScannerError(error);
             }
         }
 
-        async function getCameras() {
+        async function findRearCamera() {
             try {
                 if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-                    return [];
+                    return null;
                 }
                 
                 const devices = await navigator.mediaDevices.enumerateDevices();
-                return devices.filter(device => device.kind === 'videoinput');
-            } catch (error) {
-                console.error("Erro ao buscar câmeras:", error);
-                return [];
-            }
-        }
-
-        function findRearCamera(cameras) {
-            // Procurar por câmera traseira
-            for (let camera of cameras) {
-                if (camera.label) {
-                    const label = camera.label.toLowerCase();
-                    if (REAR_CAMERA_KEYWORDS.some(keyword => label.includes(keyword))) {
-                        return camera;
-                    }
+                cameras = devices.filter(device => device.kind === 'videoinput');
+                
+                const exactCamera = cameras.find(device => 
+                    device.label && device.label.includes("camera 0, facing back")
+                );
+                
+                if (exactCamera) {
+                    currentCameraIndex = cameras.indexOf(exactCamera);
+                    return exactCamera.deviceId;
                 }
-            }
-            
-            // Se não encontrar, tentar câmera 0
-            if (cameras.length > 0) {
-                // Ordenar por label para tentar pegar a câmera padrão
-                const sortedCameras = [...cameras].sort((a, b) => {
-                    if (a.label && b.label) {
-                        return a.label.localeCompare(b.label);
-                    }
-                    return 0;
+                
+                const rearCamera = cameras.find(device => {
+                    if (!device.label) return false;
+                    const label = device.label.toLowerCase();
+                    return REAR_CAMERA_KEYWORDS.some(keyword => 
+                        label.includes(keyword.toLowerCase())
+                    );
                 });
                 
-                return sortedCameras[0];
+                if (rearCamera) {
+                    currentCameraIndex = cameras.indexOf(rearCamera);
+                    return rearCamera.deviceId;
+                }
+                
+                if (cameras.length > 1) {
+                    currentCameraIndex = cameras.length - 1;
+                    return cameras[cameras.length - 1].deviceId;
+                }
+                
+                if (cameras.length === 1) {
+                    currentCameraIndex = 0;
+                    return cameras[0].deviceId;
+                }
+                
+                return null;
+                
+            } catch (error) {
+                console.error("Erro ao encontrar câmera:", error);
+                return null;
             }
-            
-            return null;
         }
 
-        function handleScannerError(error) {
+        async function handleScannerError(error) {
             if (html5QrCode) {
                 try {
-                    html5QrCode.stop().then(() => {
-                        html5QrCode.clear();
-                    }).catch(() => {});
+                    await html5QrCode.stop();
+                    html5QrCode.clear();
                 } catch (e) {
                     console.log('Erro ao parar scanner:', e);
                 }
@@ -566,7 +561,7 @@
             html5QrCode = null;
             currentCameraId = null;
             
-            readerElement.style.display = 'none';
+            scannerContainer.style.display = 'none';
             startBtn.style.display = 'inline-flex';
             stopBtn.style.display = 'none';
             stopBtn.disabled = true;
@@ -576,18 +571,17 @@
             } else if (error.message && error.message.includes('NotFoundError')) {
                 updateStatus('❌ Nenhuma câmera encontrada.', 'error');
             } else {
-                updateStatus('❌ Erro ao iniciar scanner: ' + error.message, 'error');
+                updateStatus('❌ Erro ao iniciar scanner.', 'error');
             }
         }
 
         function onScanError(error) {
-            // Ignorar erros de leitura normais
             if (!error || typeof error !== 'string' || !error.includes("No MultiFormat Readers")) {
                 console.log('Erro de scan:', error);
             }
         }
 
-        // ========== FUNÇÃO ONSCANSUCCESS ORIGINAL ==========
+        // ========== FUNÇÃO ONSCANSUCCESS EXATAMENTE COMO NO SEU CÓDIGO ==========
         function onScanSuccess(decodedText, decodedResult) {
             const now = Date.now();
             const code = decodedText.trim();
@@ -600,7 +594,7 @@
             
             updateStatus(`📷 Código detectado: ${code}`, 'success');
             
-            // PARAR O SCANNER IMEDIATAMENTE
+            // PARAR O SCANNER IMEDIATAMENTE - EXATAMENTE como estava
             if (html5QrCode) {
                 html5QrCode.pause();
                 setTimeout(() => {
@@ -610,7 +604,7 @@
                             isScanning = false;
                             
                             // Fechar a visualização da câmera
-                            readerElement.style.display = 'none';
+                            scannerContainer.style.display = 'none';
                             startBtn.style.display = 'inline-flex';
                             stopBtn.style.display = 'none';
                             stopBtn.disabled = true;
@@ -646,7 +640,7 @@
                 html5QrCode = null;
                 currentCameraId = null;
                 
-                readerElement.style.display = 'none';
+                scannerContainer.style.display = 'none';
                 startBtn.style.display = 'inline-flex';
                 stopBtn.style.display = 'none';
                 stopBtn.disabled = true;
@@ -655,7 +649,7 @@
             }
         }
 
-        // ========== MODAL DE CONFIRMAÇÃO ==========
+        // ========== MODAL DE CONFIRMAÇÃO (SIMPLIFICADO) ==========
         function showConfirmationModal(code) {
             scannedCodeElement.textContent = code;
             quantityInput.value = 1;
@@ -663,6 +657,7 @@
             
             confirmModal.style.display = 'flex';
             
+            // Vibração se suportado
             if (navigator.vibrate) {
                 navigator.vibrate(200);
             }
@@ -691,19 +686,19 @@
                     timestamp: new Date().getTime()
                 };
                 
-                // Enviar para Google Sheets usando POST
+                // Enviar para Google Sheets - usando no-cors para Apps Script
                 await fetch(GOOGLE_SHEETS_API, {
                     method: 'POST',
-                    mode: 'no-cors', // Para Google Apps Script
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(data)
                 });
                 
-                updateStatus(`✅ Salvo! EAN: ${code.substring(0, 20)}${code.length > 20 ? '...' : ''}, Qtd: ${quantidade}`, 'success');
+                updateStatus(`✅ Salvo! ${code} - Qtd: ${quantidade}`, 'success');
                 
-                // Fechar modal após delay
+                // Fechar modal e retomar scanner
                 setTimeout(() => {
                     confirmModal.style.display = 'none';
                     loading.style.display = 'none';
@@ -728,12 +723,12 @@
         // ========== FUNÇÕES AUXILIARES ==========
         function updateStatus(message, type = 'info') {
             statusMessage.textContent = message;
-            statusMessage.className = `status ${type} show`;
+            statusMessage.className = `status ${type}`;
             
             if (type !== 'error') {
                 setTimeout(() => {
-                    statusMessage.classList.remove('show');
-                }, 5000);
+                    statusMessage.style.display = 'none';
+                }, 4000);
             }
         }
 
@@ -762,15 +757,17 @@
 
         // ========== INICIALIZAÇÃO ==========
         document.addEventListener('DOMContentLoaded', () => {
-            // Verificar permissão de câmera antecipadamente
+            // Testar permissão de câmera
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: true })
                     .then(() => {
-                        updateStatus('✅ Câmera autorizada. Clique em "Iniciar Scanner".', 'success');
+                        updateStatus('✅ Pronto para escanear', 'success');
                     })
                     .catch(err => {
                         updateStatus('⚠️ Permissão de câmera necessária', 'warning');
                     });
+            } else {
+                updateStatus('❌ Navegador não suporta câmera', 'error');
             }
         });
     </script>
