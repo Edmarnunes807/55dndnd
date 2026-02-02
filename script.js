@@ -1,7 +1,7 @@
 // ============================================
 // CONFIGURAÇÕES GLOBAIS
 // ============================================
-const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbzhcpS4DTvz87CfrUF5GyNJcokU8aJr_EPznJUGYBB4Bn6QBqJw4yplGyCkLRi0WlD4jQ/exec";
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxzwzXNaJXVPvpFbxz5HHECAKq-Hi2UNlxdW31h8TqX/dev";
 const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
 // ============================================
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// FUNÇÕES DO SCANNER
+// FUNÇÕES DO SCANNER (EXATAMENTE COMO ANTES)
 // ============================================
 async function initScanner() {
     if (isScanning) return;
@@ -333,29 +333,21 @@ async function enableAutofocus() {
 }
 
 // ============================================
-// FUNÇÕES DA API - AGORA COM POST
+// FUNÇÕES DA API - AGORA USANDO GET (COMPATÍVEL)
 // ============================================
 async function testApiConnection() {
     try {
         updateStatus('🔗 Testando conexão...', 'info');
         
-        // USANDO POST AGORA
-        const formData = new URLSearchParams();
-        formData.append('operation', 'ping');
-        
-        const response = await fetch(GOOGLE_SHEETS_API, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData
-        });
+        // Usando GET para testar (como sua API funciona)
+        const response = await fetch(`${GOOGLE_SHEETS_API}?operation=ping`);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
         
         const result = await response.json();
+        console.log('Teste API:', result);
         
         if (result.success) {
             updateStatus('✅ API conectada', 'success');
@@ -366,6 +358,7 @@ async function testApiConnection() {
         }
         
     } catch (error) {
+        console.error('Erro na conexão:', error);
         updateStatus('❌ Falha na conexão', 'error');
         return false;
     }
@@ -387,37 +380,24 @@ async function saveToGoogleSheets() {
     cancelBtn.disabled = true;
     
     try {
-        // CRIAR FORM DATA PARA ENVIAR VIA POST
-        const formData = new URLSearchParams();
-        formData.append('operation', 'save');
-        formData.append('ean', code);
-        formData.append('quantidade', parseInt(quantidade));
-        formData.append('timestamp', new Date().getTime());
-        formData.append('source', 'scanner_app');
-        
-        console.log('📤 Enviando dados via POST:', {
+        // USANDO GET PARA SALVAR (COMPATÍVEL COM SUA API)
+        const params = new URLSearchParams({
             operation: 'save',
             ean: code,
-            quantidade: parseInt(quantidade)
+            quantidade: parseInt(quantidade),
+            timestamp: new Date().getTime(),
+            source: 'scanner_app'
         });
         
-        // FAZER REQUISIÇÃO POST
-        const response = await fetch(GOOGLE_SHEETS_API, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData
-        });
+        const url = `${GOOGLE_SHEETS_API}?${params.toString()}`;
+        console.log('📤 Enviando via GET:', url);
         
-        console.log('📥 Status da resposta:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
+        // REQUISIÇÃO GET (funciona com sua API)
+        const response = await fetch(url);
+        console.log('📥 Status:', response.status);
         
         const result = await response.json();
-        console.log('📥 Resposta do servidor:', result);
+        console.log('📥 Resposta:', result);
         
         if (result.success) {
             updateStatus(`✅ Salvo! ${code} x${quantidade}`, 'success');
@@ -438,14 +418,7 @@ async function saveToGoogleSheets() {
         
     } catch (error) {
         console.error('❌ Erro ao salvar:', error);
-        
-        // Mensagem de erro amigável
-        let userMessage = error.message;
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            userMessage = 'Falha na conexão. Verifique sua internet.';
-        }
-        
-        updateStatus(`❌ ${userMessage}`, 'error');
+        updateStatus(`❌ Erro: ${error.message}`, 'error');
         
         loading.style.display = 'none';
         saveBtn.disabled = false;
