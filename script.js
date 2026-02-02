@@ -2,7 +2,7 @@
 // CONFIGURAÇÕES GLOBAIS
 // ============================================
 // SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
-const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbxij4Hzt0TF6WHckpq-UO9P36L94b5UPhleuMAo662s7TWEn14jyGwLNILAxdtU9FGXkA/exec";
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwrR-FKk4sOORWZTHVcRj4yJ5hDhzod6_FvJTyVd01-EqMjPl5OHg9JRIA6BRhVd1ztjw/exec";
 const REAR_CAMERA_KEYWORDS = ["back", "rear", "environment", "traseira", "camera 0"];
 
 // ============================================
